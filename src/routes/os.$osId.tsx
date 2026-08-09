@@ -1,0 +1,197 @@
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Ban, Check, Copy, MessageCircle, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { PhoneShell } from "@/components/app/PhoneShell";
+import {
+  EmptyState,
+  GhostButton,
+  PrimaryButton,
+  StatusBadge,
+  TopBar,
+  inputClass,
+} from "@/components/app/ui-bits";
+import { useStore } from "@/lib/store";
+import { brl, formatDate } from "@/lib/format";
+
+export const Route = createFileRoute("/os/$osId")({
+  head: () => ({
+    meta: [
+      { title: "Detalhes da OS e mensagem | ServiceFlow" },
+      {
+        name: "description",
+        content:
+          "Veja os detalhes da ordem de serviço, finalize, cancele e gere a mensagem de WhatsApp.",
+      },
+      { property: "og:title", content: "Detalhes da OS e mensagem | ServiceFlow" },
+      { property: "og:description", content: "Mensagem profissional pronta para envio manual." },
+    ],
+  }),
+  component: OsDetail,
+});
+
+function OsDetail() {
+  const { osId } = useParams({ from: "/os/$osId" });
+  const { orders, clientById, vehicleById, serviceById, setOrderStatus } = useStore();
+  const order = orders.find((o) => o.id === osId);
+
+  const client = order ? clientById(order.clientId) : undefined;
+  const vehicle = order ? vehicleById(order.vehicleId) : undefined;
+  const service = order ? serviceById(order.serviceId) : undefined;
+
+  const defaultMessage = useMemo(() => {
+    if (!order) return "";
+    return [
+      `Olá, ${client?.name?.split(" ")[0] ?? "cliente"}!`,
+      "",
+      "Seu atendimento foi confirmado.",
+      "",
+      `Data: ${formatDate(order.date)}`,
+      `Horário: ${order.time}`,
+      `Veículo: ${vehicle?.brand ?? ""} ${vehicle?.model ?? ""}`.trim(),
+      `Serviço: ${service?.name ?? ""}`,
+      `Valor: ${brl(order.price)}`,
+      "",
+      "Obrigado pela preferência!",
+    ].join("\n");
+  }, [order, client, vehicle, service]);
+
+  const [message, setMessage] = useState(defaultMessage);
+  const [editing, setEditing] = useState(false);
+
+  if (!order) {
+    return (
+      <PhoneShell fab={false} bottomNav={false}>
+        <TopBar title="Ordem de serviço" backTo="/agenda" />
+        <div className="p-5">
+          <EmptyState title="OS não encontrada" description="Volte para a agenda." />
+        </div>
+      </PhoneShell>
+    );
+  }
+
+  const rows = [
+    { k: "Cliente", v: client?.name },
+    { k: "Telefone", v: client?.phone },
+    { k: "Veículo", v: `${vehicle?.brand ?? ""} ${vehicle?.model ?? ""}` },
+    { k: "Placa", v: vehicle?.plate },
+    { k: "Serviço", v: service?.name },
+    { k: "Data", v: formatDate(order.date) },
+    { k: "Horário", v: order.time },
+    { k: "Valor", v: brl(order.price) },
+  ];
+
+  return (
+    <PhoneShell fab={false} bottomNav={false}>
+      <TopBar title={order.code} subtitle="Ordem de serviço" backTo="/agenda" />
+
+      <section className="px-5 pt-4">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-bold">{brl(order.price)}</p>
+            <StatusBadge status={order.status} />
+          </div>
+          <div className="mt-3">
+            {rows.map((row) => (
+              <div
+                key={row.k}
+                className="flex items-center justify-between border-b border-border py-2.5 last:border-0"
+              >
+                <span className="text-xs text-muted-foreground">{row.k}</span>
+                <span className="text-sm font-semibold">{row.v || "—"}</span>
+              </div>
+            ))}
+          </div>
+          {order.notes ? (
+            <p className="mt-3 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
+              {order.notes}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="px-5 pt-5">
+        <div className="rounded-2xl border border-secondary/20 bg-secondary/8 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-bold text-secondary">Mensagem para o cliente</p>
+            <button
+              onClick={() => setEditing((v) => !v)}
+              className="flex items-center gap-1 text-xs font-semibold text-secondary"
+            >
+              <Pencil className="h-3.5 w-3.5" /> {editing ? "Pré-visualizar" : "Editar"}
+            </button>
+          </div>
+
+          {editing ? (
+            <textarea
+              rows={11}
+              className={inputClass}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          ) : (
+            <pre className="whitespace-pre-wrap rounded-xl bg-card p-4 font-sans text-sm leading-relaxed">
+              {message}
+            </pre>
+          )}
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <GhostButton
+              onClick={() => {
+                navigator.clipboard?.writeText(message);
+                toast.success("Mensagem copiada");
+              }}
+            >
+              <Copy className="h-4 w-4" /> Copiar
+            </GhostButton>
+            <a
+              href={`https://wa.me/55${(client?.whatsapp ?? "").replace(/\D/g, "")}?text=${encodeURIComponent(message)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl bg-brand-accent px-4 py-3 text-sm font-semibold text-secondary-foreground shadow-float"
+            >
+              <MessageCircle className="h-4 w-4" /> Abrir WhatsApp
+            </a>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            O envio continua manual — você mantém o contato pessoal com o cliente.
+          </p>
+        </div>
+      </section>
+
+      <section className="space-y-2.5 px-5 pb-10 pt-5">
+        {order.status === "AGENDADO" ? (
+          <>
+            <PrimaryButton
+              onClick={async () => {
+                await setOrderStatus(order.id, "FINALIZADO");
+                toast.success("OS finalizada — receita realizada atualizada");
+              }}
+            >
+              <Check className="h-4 w-4" /> Marcar como finalizada
+            </PrimaryButton>
+            <GhostButton
+              onClick={async () => {
+                await setOrderStatus(order.id, "CANCELADO");
+                toast("OS cancelada — removida do faturamento previsto");
+              }}
+            >
+              <Ban className="h-4 w-4" /> Cancelar atendimento
+            </GhostButton>
+          </>
+        ) : (
+          <GhostButton onClick={() => void setOrderStatus(order.id, "AGENDADO")}>
+            Reabrir como agendado
+          </GhostButton>
+        )}
+        <Link
+          to="/clientes/$clientId"
+          params={{ clientId: order.clientId }}
+          className="block rounded-xl border border-border bg-card px-4 py-3 text-center text-sm font-semibold"
+        >
+          Ver perfil do cliente
+        </Link>
+      </section>
+    </PhoneShell>
+  );
+}
