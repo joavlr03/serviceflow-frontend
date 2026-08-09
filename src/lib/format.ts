@@ -3,6 +3,16 @@ export const brl = (value: number) =>
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
 
+export const parseMoney = (value: string) => {
+  const normalized = value
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\.(?=.*[,])/g, "")
+    .replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export const parseISO = (d: string) => {
   const parts = d.split("-").map(Number);
   return new Date(parts[0] ?? 2026, (parts[1] ?? 1) - 1, parts[2] ?? 1);

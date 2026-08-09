@@ -12,6 +12,7 @@ import {
 } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
 import { formatDate } from "@/lib/format";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/clientes/")({
   head: () => ({
@@ -162,15 +163,25 @@ function Clientes() {
               </Field>
               <PrimaryButton
                 onClick={async () => {
-                  if (!form.name.trim()) return;
-                  await addClient({
-                    name: form.name,
-                    phone: form.phone,
-                    whatsapp: form.whatsapp || form.phone,
-                    notes: form.notes,
-                  });
-                  setForm({ name: "", phone: "", whatsapp: "", notes: "" });
-                  setOpen(false);
+                  if (!form.name.trim() || !form.phone.trim()) {
+                    toast.error("Informe o nome e o telefone do cliente");
+                    return;
+                  }
+                  try {
+                    await addClient({
+                      name: form.name.trim(),
+                      phone: form.phone.trim(),
+                      whatsapp: form.whatsapp.trim() || form.phone.trim(),
+                      notes: form.notes.trim(),
+                    });
+                    setForm({ name: "", phone: "", whatsapp: "", notes: "" });
+                    setOpen(false);
+                    toast.success("Cliente salvo com sucesso");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Não foi possível salvar o cliente",
+                    );
+                  }
                 }}
               >
                 Salvar cliente

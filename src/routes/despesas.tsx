@@ -12,7 +12,7 @@ import {
   inputClass,
 } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
-import { brl, formatDate, todayISO } from "@/lib/format";
+import { brl, formatDate, parseMoney, todayISO } from "@/lib/format";
 import type { ExpenseCategory } from "@/lib/types";
 
 export const Route = createFileRoute("/despesas")({
@@ -131,7 +131,7 @@ function Despesas() {
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Valor (R$)">
                   <input
-                    type="number"
+                    type="text"
                     inputMode="decimal"
                     className={inputClass}
                     value={form.amount}
@@ -157,23 +157,33 @@ function Despesas() {
               </Field>
               <PrimaryButton
                 onClick={async () => {
-                  if (!form.description.trim() || !form.amount) return;
-                  await addExpense({
-                    description: form.description,
-                    category: form.category,
-                    amount: Number(form.amount) || 0,
-                    date: form.date,
-                    notes: form.notes,
-                  });
-                  setForm({
-                    description: "",
-                    category: "Produtos",
-                    amount: "",
-                    date: todayISO(),
-                    notes: "",
-                  });
-                  setOpen(false);
-                  toast.success("Despesa registrada");
+                  const amount = parseMoney(form.amount);
+                  if (!form.description.trim() || amount <= 0 || !form.date) {
+                    toast.error("Informe a descrição, um valor maior que zero e a data");
+                    return;
+                  }
+                  try {
+                    await addExpense({
+                      description: form.description.trim(),
+                      category: form.category,
+                      amount,
+                      date: form.date,
+                      notes: form.notes.trim(),
+                    });
+                    setForm({
+                      description: "",
+                      category: "Produtos",
+                      amount: "",
+                      date: todayISO(),
+                      notes: "",
+                    });
+                    setOpen(false);
+                    toast.success("Despesa registrada");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Não foi possível salvar a despesa",
+                    );
+                  }
                 }}
               >
                 Salvar despesa

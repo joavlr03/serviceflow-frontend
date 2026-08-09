@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { Field, PrimaryButton, TopBar, inputClass } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
 import { brl, todayISO } from "@/lib/format";
+import { parseMoney } from "@/lib/format";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/os/nova")({
   head: () => ({
@@ -48,34 +50,65 @@ function NovaOS() {
   );
   const isNewClient = clientId === "__new";
 
+  useEffect(() => {
+    if (!clientId && clients[0]) setClientId(clients[0].id);
+  }, [clientId, clients]);
+
+  useEffect(() => {
+    if (!serviceId && services[0]) {
+      setServiceId(services[0].id);
+      setPrice(String(services[0].price));
+    }
+  }, [serviceId, services]);
+
   const submit = async () => {
-    let finalClientId = clientId;
-    if (isNewClient) {
-      if (!newClient.name.trim()) return;
-      finalClientId = (
-        await addClient({
-          name: newClient.name,
-          phone: newClient.phone,
-          whatsapp: newClient.phone,
-        })
-      ).id;
+    try {
+      let finalClientId = clientId;
+      if (isNewClient) {
+        if (!newClient.name.trim() || !newClient.phone.trim()) {
+          toast.error("Informe o nome e o telefone do novo cliente");
+          return;
+        }
+        finalClientId = (
+          await addClient({
+            name: newClient.name.trim(),
+            phone: newClient.phone.trim(),
+            whatsapp: newClient.phone.trim(),
+          })
+        ).id;
+      }
+      if (!finalClientId) {
+        toast.error("Selecione um cliente");
+        return;
+      }
+      let finalVehicleId = vehicleId;
+      if (!finalVehicleId || finalVehicleId === "__new") {
+        if (!newVehicle.brand.trim() || !newVehicle.model.trim()) {
+          toast.error("Informe a marca e o modelo do veículo");
+          return;
+        }
+        finalVehicleId = (await addVehicle({ ...newVehicle, clientId: finalClientId })).id;
+      }
+      const orderPrice = parseMoney(price);
+      if (!serviceId || !date || !time || orderPrice <= 0) {
+        toast.error("Informe serviço, data, horário e um valor maior que zero");
+        return;
+      }
+      const created = await addOrder({
+        clientId: finalClientId,
+        vehicleId: finalVehicleId,
+        serviceId,
+        date,
+        time,
+        price: orderPrice,
+        notes: notes.trim(),
+        status: "AGENDADO",
+      });
+      toast.success("Ordem de serviço salva");
+      await navigate({ to: "/os/$osId", params: { osId: created.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a OS");
     }
-    let finalVehicleId = vehicleId;
-    if (!finalVehicleId || finalVehicleId === "__new") {
-      if (!newVehicle.brand.trim() && !newVehicle.model.trim()) return;
-      finalVehicleId = (await addVehicle({ ...newVehicle, clientId: finalClientId })).id;
-    }
-    const created = await addOrder({
-      clientId: finalClientId,
-      vehicleId: finalVehicleId,
-      serviceId,
-      date,
-      time,
-      price: Number(price) || 0,
-      notes,
-      status: "AGENDADO",
-    });
-    navigate({ to: "/os/$osId", params: { osId: created.id } });
   };
 
   return (
@@ -237,7 +270,7 @@ function NovaOS() {
 
             <Field label="Valor (R$)" hint="Você pode ajustar o valor sugerido do serviço.">
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 className={inputClass}
                 value={price}
