@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Droplets, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Field, PrimaryButton, inputClass } from "@/components/app/ui-bits";
@@ -52,9 +52,9 @@ function Login() {
             try {
               const user = await login(email, password);
               if (user.passwordChangeRequired) {
-                const next = window.prompt("Crie uma nova senha definitiva (mínimo 8 caracteres)");
+                const next = window.prompt("Crie uma nova senha definitiva (mínimo 12 caracteres)");
                 const confirmation = window.prompt("Digite novamente a nova senha definitiva");
-                if (!next || next.length < 8) {
+                if (!next || next.length < 12) {
                   clearSession();
                   throw new Error("É necessário definir uma nova senha");
                 }
@@ -92,6 +92,9 @@ function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 className={`${inputClass} pl-10`}
                 placeholder="seu@email.com"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
               />
             </div>
           </Field>
@@ -106,6 +109,9 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 className={`${inputClass} pl-10 pr-10`}
                 placeholder="••••••"
+                autoComplete="current-password"
+                autoCapitalize="none"
+                spellCheck={false}
               />
               <button
                 type="button"
@@ -142,10 +148,6 @@ function Login() {
           <PrimaryButton type="submit" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}
           </PrimaryButton>
-
-          <Link to="/suporte" className="block text-center text-xs font-semibold text-secondary">
-            Área restrita do suporte
-          </Link>
 
           <p className="pb-8 pt-2 text-center text-[11px] text-muted-foreground">
             ServiceFlow • Plataforma de gestão para prestadores de serviço

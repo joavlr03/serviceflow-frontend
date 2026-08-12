@@ -10,7 +10,8 @@ import type {
 
 const API_URL = import.meta.env["VITE_API_URL"] ?? "http://localhost:9000/api/v2";
 let accessToken: string | null = null;
-const storage = () => (typeof window === "undefined" ? null : window.localStorage);
+const storage = () => (typeof window === "undefined" ? null : window.sessionStorage);
+let refreshInFlight: Promise<boolean> | null = null;
 type LoginResult = {
   accessToken: string;
   refreshToken: string;
@@ -45,7 +46,7 @@ export class ApiError extends Error {
   }
 }
 
-async function refreshSession() {
+async function performRefresh() {
   const refreshToken = storage()?.getItem("serviceflow.refreshToken");
   if (!refreshToken) return false;
   const response = await fetch(`${API_URL}/auth/refresh`, {
@@ -61,6 +62,15 @@ async function refreshSession() {
   accessToken = data.accessToken;
   storage()?.setItem("serviceflow.refreshToken", data.refreshToken);
   return true;
+}
+
+async function refreshSession() {
+  if (!refreshInFlight) {
+    refreshInFlight = performRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
 }
 
 async function request<T>(
@@ -112,23 +122,9 @@ export async function logout() {
   clearSession();
 }
 export async function forgotPassword(email: string) {
-  void email;
-  return {
-    message: "Solicite uma nova senha ao suporte: qorelab.suporte@gmail.com",
-  };
-}
-export async function supportResetPassword(
-  supportKey: string,
-  email: string,
-  temporaryPassword: string,
-) {
   return request<{ message: string }>(
-    "/auth/suporte/redefinir-senha",
-    {
-      method: "POST",
-      headers: { "X-Support-Key": supportKey },
-      body: JSON.stringify({ email, temporaryPassword }),
-    },
+    "/auth/esqueci-minha-senha",
+    { method: "POST", body: JSON.stringify({ email }) },
     false,
     false,
   );
@@ -169,7 +165,15 @@ const order = (x: ApiOrder): ServiceOrder => ({
 });
 const expense = (x: ApiExpense): Expense => ({ ...x, id: String(x.id) });
 
-const dates = "dataInicial=2000-01-01&dataFinal=2100-12-31";
+function operationalPeriod() {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 366);
+  return new URLSearchParams({
+    dataInicial: start.toISOString().slice(0, 10),
+    dataFinal: end.toISOString().slice(0, 10),
+  }).toString();
+}
 export const api = {
   company: async () => {
     const x = await request<ApiCompany>("/empresa");
@@ -188,7 +192,8 @@ export const api = {
       }),
     ),
   services: async () => (await request<ApiService[]>("/servicos")).map(service),
-  orders: async () => (await request<ApiOrder[]>(`/ordens-servico?${dates}`)).map(order),
+  orders: async () =>
+    (await request<ApiOrder[]>(`/ordens-servico?${operationalPeriod()}`)).map(order),
   createOrder: async (x: Omit<ServiceOrder, "id" | "code">) => {
     const { status: _status, ...body } = x;
     return order(
@@ -222,7 +227,8 @@ export const api = {
         body: JSON.stringify({ status }),
       }),
     ),
-  expenses: async () => (await request<ApiExpense[]>(`/despesas?${dates}`)).map(expense),
+  expenses: async () =>
+    (await request<ApiExpense[]>(`/despesas?${operationalPeriod()}`)).map(expense),
   createExpense: async (x: Omit<Expense, "id">) =>
     expense(await request<ApiExpense>("/despesas", { method: "POST", body: JSON.stringify(x) })),
 };
