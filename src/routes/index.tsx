@@ -1,8 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Droplets, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, Droplets, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { Field, PrimaryButton, inputClass } from "@/components/app/ui-bits";
-import { changePassword, clearSession, forgotPassword, login } from "@/lib/api-client";
+import {
+  changePassword,
+  clearSession,
+  forgotPassword,
+  getSetupStatus,
+  login,
+  setupOwner,
+} from "@/lib/api-client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -28,8 +35,19 @@ function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [segment, setSegment] = useState("Estética Automotiva");
+  const [ownerName, setOwnerName] = useState("");
+  const [setupAvailable, setSetupAvailable] = useState<boolean | null>(null);
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getSetupStatus()
+      .then(({ available }) => setSetupAvailable(available))
+      .catch(() => setSetupAvailable(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-muted/60 py-0 sm:py-8">
@@ -48,8 +66,20 @@ function Login() {
           className="-mt-8 flex-1 space-y-4 rounded-t-[2rem] bg-background px-6 pt-8"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (setupAvailable === null) return;
             setLoading(true);
             try {
+              if (setupAvailable) {
+                if (password !== passwordConfirmation) {
+                  throw new Error("As senhas não coincidem");
+                }
+                await setupOwner({ companyName, segment, ownerName, email, password });
+                const user = await login(email, password);
+                window.dispatchEvent(new Event("serviceflow-auth"));
+                toast.success(`Bem-vindo, ${user.name}!`);
+                await navigate({ to: "/dashboard" });
+                return;
+              }
               const user = await login(email, password);
               if (user.passwordChangeRequired) {
                 const next = window.prompt("Crie uma nova senha definitiva (mínimo 12 caracteres)");
@@ -71,23 +101,80 @@ function Login() {
               window.dispatchEvent(new Event("serviceflow-auth"));
               await navigate({ to: "/dashboard" });
             } catch (error) {
-              toast.error(error instanceof Error ? error.message : "Não foi possível entrar");
+              toast.error(
+                error instanceof Error ? error.message : "Não foi possível concluir o acesso",
+              );
             } finally {
               setLoading(false);
             }
           }}
         >
           <div>
-            <h2 className="text-xl font-bold tracking-tight">Entrar</h2>
-            <p className="text-sm text-muted-foreground">Acesse o painel do seu estabelecimento.</p>
+            <h2 className="text-xl font-bold tracking-tight">
+              {setupAvailable ? "Criar acesso do proprietário" : "Entrar"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {setupAvailable
+                ? "Cadastre sua empresa para começar a usar o ServiceFlow."
+                : "Acesse o painel do seu estabelecimento."}
+            </p>
           </div>
 
-          <Field label="E-mail">
+          {setupAvailable && (
+            <>
+              <Field label="Nome da empresa">
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    required
+                    maxLength={150}
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className={`${inputClass} pl-10`}
+                    placeholder="Nome do estabelecimento"
+                    autoComplete="organization"
+                  />
+                </div>
+              </Field>
+
+              <Field label="Segmento">
+                <div className="relative">
+                  <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    required
+                    maxLength={100}
+                    value={segment}
+                    onChange={(e) => setSegment(e.target.value)}
+                    className={`${inputClass} pl-10`}
+                    placeholder="Ex.: Estética Automotiva"
+                  />
+                </div>
+              </Field>
+
+              <Field label="Nome do proprietário">
+                <div className="relative">
+                  <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    required
+                    maxLength={150}
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    className={`${inputClass} pl-10`}
+                    placeholder="Seu nome"
+                    autoComplete="name"
+                  />
+                </div>
+              </Field>
+            </>
+          )}
+
+          <Field label="E-mail ou identificador">
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
-                type="email"
+                type="text"
                 required
+                maxLength={180}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`${inputClass} pl-10`}
@@ -105,11 +192,13 @@ function Login() {
               <input
                 type={show ? "text" : "password"}
                 required
+                minLength={setupAvailable ? 12 : undefined}
+                maxLength={72}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`${inputClass} pl-10 pr-10`}
                 placeholder="••••••"
-                autoComplete="current-password"
+                autoComplete={setupAvailable ? "new-password" : "current-password"}
                 autoCapitalize="none"
                 spellCheck={false}
               />
@@ -124,29 +213,66 @@ function Login() {
             </div>
           </Field>
 
-          <button
-            type="button"
-            onClick={async () => {
-              if (!email) {
-                toast.error("Informe seu e-mail");
-                return;
-              }
-              try {
-                const r = await forgotPassword(email);
-                toast.success(r.message);
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : "Falha ao solicitar recuperação",
-                );
-              }
-            }}
-            className="text-xs font-semibold text-secondary"
-          >
-            Esqueci minha senha
-          </button>
+          {setupAvailable && (
+            <>
+              <Field label="Confirmar senha">
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type={show ? "text" : "password"}
+                    required
+                    minLength={12}
+                    maxLength={72}
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
+                    className={`${inputClass} pl-10 pr-10`}
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                  />
+                </div>
+              </Field>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Recomendamos usar um e-mail real para facilitar a recuperação de acesso. A senha
+                deve ter pelo menos 12 caracteres.
+              </p>
+            </>
+          )}
 
-          <PrimaryButton type="submit" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
+          {!setupAvailable && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  toast.error("Informe seu e-mail ou identificador");
+                  return;
+                }
+                try {
+                  const r = await forgotPassword(email);
+                  toast.success(r.message);
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : "Falha ao solicitar recuperação",
+                  );
+                }
+              }}
+              className="text-xs font-semibold text-secondary"
+            >
+              Esqueci minha senha
+            </button>
+          )}
+
+          <PrimaryButton type="submit" disabled={loading || setupAvailable === null}>
+            {setupAvailable === null
+              ? "Verificando cadastro..."
+              : loading
+                ? setupAvailable
+                  ? "Criando cadastro..."
+                  : "Entrando..."
+                : setupAvailable
+                  ? "Criar cadastro"
+                  : "Entrar"}
           </PrimaryButton>
 
           <p className="pb-8 pt-2 text-center text-[11px] text-muted-foreground">

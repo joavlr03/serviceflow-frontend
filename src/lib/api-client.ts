@@ -113,6 +113,26 @@ export async function login(email: string, password: string) {
   storage()?.setItem("serviceflow.refreshToken", response.refreshToken);
   return response.user;
 }
+export async function getSetupStatus() {
+  return request<{ available: boolean }>("/setup/status", {}, false, false);
+}
+export async function setupOwner(input: {
+  companyName: string;
+  segment: string;
+  ownerName: string;
+  email: string;
+  password: string;
+}) {
+  return request<{ companyId: number; userId: number }>(
+    "/setup",
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    false,
+    false,
+  );
+}
 export async function logout() {
   const refreshToken = storage()?.getItem("serviceflow.refreshToken");
   if (refreshToken)
