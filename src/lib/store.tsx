@@ -27,8 +27,9 @@ interface StoreValue {
   expenses: Expense[];
   loading: boolean;
   addClient: (c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
+  updateClient: (id: string, c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
   addVehicle: (v: Omit<Vehicle, "id">) => Promise<Vehicle>;
-  addOrder: (o: Omit<ServiceOrder, "id" | "code">) => Promise<ServiceOrder>;
+  addOrder: (o: Omit<ServiceOrder, "id" | "code">, idempotencyKey: string) => Promise<ServiceOrder>;
   updateOrder: (id: string, patch: Partial<ServiceOrder>) => Promise<void>;
   setOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   addExpense: (e: Omit<Expense, "id">) => Promise<void>;
@@ -82,13 +83,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setClients((p) => [c, ...p]);
     return c;
   }, []);
+  const updateClient = useCallback(async (id: string, x: Omit<Client, "id" | "createdAt">) => {
+    const c = await api.updateClient(id, x);
+    setClients((p) => p.map((client) => (client.id === id ? c : client)));
+    return c;
+  }, []);
   const addVehicle = useCallback(async (x: Omit<Vehicle, "id">) => {
     const v = await api.createVehicle(x);
     setVehicles((p) => [v, ...p]);
     return v;
   }, []);
-  const addOrder = useCallback(async (x: Omit<ServiceOrder, "id" | "code">) => {
-    const o = await api.createOrder(x);
+  const addOrder = useCallback(async (x: Omit<ServiceOrder, "id" | "code">, key: string) => {
+    const o = await api.createOrder(x, key);
     setOrders((p) => [o, ...p]);
     return o;
   }, []);
@@ -120,6 +126,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       expenses,
       loading,
       addClient,
+      updateClient,
       addVehicle,
       addOrder,
       updateOrder,
@@ -144,6 +151,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       expenses,
       loading,
       addClient,
+      updateClient,
       addVehicle,
       addOrder,
       updateOrder,

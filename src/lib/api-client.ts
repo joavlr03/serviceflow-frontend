@@ -202,6 +202,8 @@ export const api = {
   clients: async () => (await request<ApiClient[]>("/clientes")).map(client),
   createClient: async (x: Omit<Client, "id" | "createdAt">) =>
     client(await request<ApiClient>("/clientes", { method: "POST", body: JSON.stringify(x) })),
+  updateClient: async (id: string, x: Omit<Client, "id" | "createdAt">) =>
+    client(await request<ApiClient>(`/clientes/${id}`, { method: "PUT", body: JSON.stringify(x) })),
   clientVehicles: async (id: string) =>
     (await request<ApiVehicle[]>(`/clientes/${id}/veiculos`)).map(vehicle),
   createVehicle: async (x: Omit<Vehicle, "id">) =>
@@ -214,11 +216,12 @@ export const api = {
   services: async () => (await request<ApiService[]>("/servicos")).map(service),
   orders: async () =>
     (await request<ApiOrder[]>(`/ordens-servico?${operationalPeriod()}`)).map(order),
-  createOrder: async (x: Omit<ServiceOrder, "id" | "code">) => {
+  createOrder: async (x: Omit<ServiceOrder, "id" | "code">, idempotencyKey: string) => {
     const { status: _status, ...body } = x;
     return order(
       await request<ApiOrder>("/ordens-servico", {
         method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({
           ...body,
           clientId: Number(body.clientId),

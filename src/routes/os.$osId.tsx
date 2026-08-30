@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Ban, Check, Copy, MessageCircle, Pencil } from "lucide-react";
+import { Ban, Check, CheckCircle2, Copy, MessageCircle, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import {
@@ -15,6 +15,9 @@ import { useStore } from "@/lib/store";
 import { brl, formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/os/$osId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    criada: search["criada"] === true || search["criada"] === "true",
+  }),
   head: () => ({
     meta: [
       { title: "Detalhes da OS e mensagem | ServiceFlow" },
@@ -32,6 +35,7 @@ export const Route = createFileRoute("/os/$osId")({
 
 function OsDetail() {
   const { osId } = useParams({ from: "/os/$osId" });
+  const { criada } = Route.useSearch();
   const { orders, clientById, vehicleById, serviceById, setOrderStatus } = useStore();
   const order = orders.find((o) => o.id === osId);
 
@@ -84,6 +88,21 @@ function OsDetail() {
   return (
     <PhoneShell fab={false} bottomNav={false}>
       <TopBar title={order.code} subtitle="Ordem de serviço" backTo="/agenda" />
+
+      {criada ? (
+        <div
+          role="status"
+          className="mx-5 mt-4 flex items-start gap-3 rounded-xl border border-success/30 bg-success/10 p-4 text-success"
+        >
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold">OS registrada com sucesso</p>
+            <p className="mt-0.5 text-xs text-foreground">
+              {order.code} já foi adicionada à agenda e ao faturamento previsto.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <section className="px-5 pt-4">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-card">

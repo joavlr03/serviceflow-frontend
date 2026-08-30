@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, LoaderCircle } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { Field, PrimaryButton, TopBar, inputClass } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
@@ -43,6 +43,9 @@ function NovaOS() {
   const [time, setTime] = useState("09:00");
   const [price, setPrice] = useState<string>(String(services[0]?.price ?? 0));
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const cars = useMemo(
     () => (clientId ? vehiclesOfClient(clientId) : []),
@@ -62,6 +65,10 @@ function NovaOS() {
   }, [serviceId, services]);
 
   const submit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       let finalClientId = clientId;
       if (isNewClient) {
@@ -76,6 +83,7 @@ function NovaOS() {
             whatsapp: newClient.phone.trim(),
           })
         ).id;
+        setClientId(finalClientId);
       }
       if (!finalClientId) {
         toast.error("Selecione um cliente");
@@ -88,26 +96,40 @@ function NovaOS() {
           return;
         }
         finalVehicleId = (await addVehicle({ ...newVehicle, clientId: finalClientId })).id;
+        setVehicleId(finalVehicleId);
       }
       const orderPrice = parseMoney(price);
       if (!serviceId || !date || !time || orderPrice <= 0) {
         toast.error("Informe serviço, data, horário e um valor maior que zero");
         return;
       }
-      const created = await addOrder({
-        clientId: finalClientId,
-        vehicleId: finalVehicleId,
-        serviceId,
-        date,
-        time,
-        price: orderPrice,
-        notes: notes.trim(),
-        status: "AGENDADO",
+
+      idempotencyKeyRef.current ??= crypto.randomUUID();
+      const created = await addOrder(
+        {
+          clientId: finalClientId,
+          vehicleId: finalVehicleId,
+          serviceId,
+          date,
+          time,
+          price: orderPrice,
+          notes: notes.trim(),
+          status: "AGENDADO",
+        },
+        idempotencyKeyRef.current,
+      );
+      await navigate({
+        to: "/os/$osId",
+        params: { osId: created.id },
+        search: { criada: true },
+        replace: true,
       });
-      toast.success("Ordem de serviço salva");
-      await navigate({ to: "/os/$osId", params: { osId: created.id } });
+      toast.success(`${created.code} registrada com sucesso`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar a OS");
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -343,8 +365,16 @@ function NovaOS() {
         {step < 2 ? (
           <PrimaryButton onClick={() => setStep((s) => s + 1)}>Continuar</PrimaryButton>
         ) : (
-          <PrimaryButton onClick={submit}>
-            <Check className="h-4 w-4" /> Salvar OS
+          <PrimaryButton onClick={submit} disabled={isSubmitting} aria-busy={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <LoaderCircle className="h-4 w-4 animate-spin" /> Salvando...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4" /> Salvar OS
+              </>
+            )}
           </PrimaryButton>
         )}
       </div>

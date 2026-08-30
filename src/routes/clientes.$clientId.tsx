@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useState } from "react";
-import { Car, MessageCircle, Phone, Plus, X } from "lucide-react";
+import { Car, MessageCircle, Pencil, Phone, Plus, X } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import {
   EmptyState,
@@ -14,6 +14,7 @@ import {
 } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
 import { brl, formatDate } from "@/lib/format";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/clientes/$clientId")({
   head: () => ({
@@ -32,11 +33,21 @@ export const Route = createFileRoute("/clientes/$clientId")({
 
 function ClientDetail() {
   const { clientId } = useParams({ from: "/clientes/$clientId" });
-  const { clientById, vehiclesOfClient, ordersOfClient, serviceById, vehicleById, addVehicle } =
-    useStore();
+  const {
+    clientById,
+    vehiclesOfClient,
+    ordersOfClient,
+    serviceById,
+    vehicleById,
+    addVehicle,
+    updateClient,
+  } = useStore();
   const client = clientById(clientId);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
   const [form, setForm] = useState({ brand: "", model: "", plate: "", color: "" });
+  const [editForm, setEditForm] = useState({ name: "", phone: "", whatsapp: "", notes: "" });
 
   if (!client) {
     return (
@@ -82,7 +93,22 @@ function ClientDetail() {
               </p>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEditForm({
+                  name: client.name,
+                  phone: client.phone,
+                  whatsapp: client.whatsapp,
+                  notes: client.notes ?? "",
+                });
+                setEditOpen(true);
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary-foreground/12 py-2.5 text-xs font-semibold"
+            >
+              <Pencil className="h-4 w-4" /> Editar
+            </button>
             <a
               href={`https://wa.me/55${client.whatsapp.replace(/\D/g, "")}`}
               target="_blank"
@@ -176,6 +202,86 @@ function ClientDetail() {
           ) : null}
         </div>
       </section>
+
+      {editOpen ? (
+        <div className="absolute inset-0 z-20 flex items-end bg-foreground/40">
+          <div className="max-h-[85%] w-full overflow-y-auto rounded-t-[1.75rem] bg-background p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-bold">Editar cliente</h2>
+              <button onClick={() => setEditOpen(false)} aria-label="Fechar">
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <Field label="Nome">
+                <input
+                  className={inputClass}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder="Nome completo"
+                />
+              </Field>
+              <Field label="Telefone">
+                <input
+                  className={inputClass}
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </Field>
+              <Field label="WhatsApp" hint="Usado para gerar as mensagens de confirmação.">
+                <input
+                  className={inputClass}
+                  value={editForm.whatsapp}
+                  onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </Field>
+              <Field label="Observações">
+                <textarea
+                  rows={3}
+                  className={inputClass}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder="Preferências, restrições, informações úteis"
+                />
+              </Field>
+              <PrimaryButton
+                disabled={savingClient}
+                onClick={async () => {
+                  const payload = {
+                    name: editForm.name.trim(),
+                    phone: editForm.phone.trim(),
+                    whatsapp: editForm.whatsapp.trim() || editForm.phone.trim(),
+                    notes: editForm.notes.trim(),
+                  };
+                  if (!payload.name || !payload.phone) {
+                    toast.error("Informe o nome e o telefone do cliente");
+                    return;
+                  }
+                  setSavingClient(true);
+                  try {
+                    await updateClient(client.id, payload);
+                    setEditOpen(false);
+                    toast.success("Cliente atualizado com sucesso");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Não foi possível atualizar o cliente",
+                    );
+                  } finally {
+                    setSavingClient(false);
+                  }
+                }}
+              >
+                {savingClient ? "Salvando..." : "Salvar alterações"}
+              </PrimaryButton>
+              <GhostButton onClick={() => setEditOpen(false)}>Cancelar</GhostButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {open ? (
         <div className="absolute inset-0 z-20 flex items-end bg-foreground/40">
