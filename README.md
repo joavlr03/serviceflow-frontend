@@ -1089,9 +1089,10 @@ A variável `VITE_API_URL` aponta por padrão para `http://localhost:9000/api/v2
 
 ### Tela de Login 
 
+<img width="433" height="834" alt="Captura de tela 2026-08-17 145855" src="https://github.com/user-attachments/assets/4a47fbd5-2599-4e7d-b990-4355836a570f" />
+
 <img width="456" height="873" alt="Captura de tela 2026-08-17 145743" src="https://github.com/user-attachments/assets/075e9eda-e2a7-4547-953d-1906c72534c8" />
 
-<img width="433" height="834" alt="Captura de tela 2026-08-17 145855" src="https://github.com/user-attachments/assets/4a47fbd5-2599-4e7d-b990-4355836a570f" />
 
 <img width="412" height="892" alt="Captura de tela 2026-08-17 145757" src="https://github.com/user-attachments/assets/2968348b-dc16-4260-8bf6-dc59bfc57d79" />
 
@@ -1102,4 +1103,7 @@ A variável `VITE_API_URL` aponta por padrão para `http://localhost:9000/api/v2
 <img width="437" height="887" alt="Captura de tela 2026-08-17 145954" src="https://github.com/user-attachments/assets/d6828ff9-72e1-43bb-9b5e-c640645aa883" />
 
 
+<img width="399" height="777" alt="Captura de tela 2026-08-09 003945" src="https://github.com/user-attachments/assets/5a5736a5-21fa-449e-aced-077a4d4dc033" />
+
+<img width="455" height="803" alt="Captura de tela 2026-08-09 004248" src="https://github.com/user-attachments/assets/6ca83022-f574-4a74-b781-bfa6cfb2cf9e" />
 
