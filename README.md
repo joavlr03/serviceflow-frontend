@@ -1087,23 +1087,30 @@ A variável `VITE_API_URL` aponta por padrão para `http://localhost:9000/api/v2
 
 ## Telas
 
-### Tela de Login 
+### Login
+<img width="456" height="873" alt="Login" src="https://github.com/user-attachments/assets/948d6e7c-d9dd-4b85-9a57-b50bfac3ef33" />
 
-<img width="433" height="834" alt="Captura de tela 2026-08-17 145855" src="https://github.com/user-attachments/assets/4a47fbd5-2599-4e7d-b990-4355836a570f" />
+### Inicio
+<img width="412" height="892" alt="Inicio" src="https://github.com/user-attachments/assets/81a740b1-3ba2-42d5-a0ee-6399efc4ba4d" />
 
-<img width="456" height="873" alt="Captura de tela 2026-08-17 145743" src="https://github.com/user-attachments/assets/075e9eda-e2a7-4547-953d-1906c72534c8" />
+### Agenda de Clientes
+<img width="399" height="777" alt="Agenda de Clientes" src="https://github.com/user-attachments/assets/e1289c4c-415b-4ded-9149-aa01fac9c960" />
 
+### Perfil de Clientes
+<img width="442" height="810" alt="Cliente Perfil" src="https://github.com/user-attachments/assets/a1dd323c-98d6-4aac-94b6-14d4d19f44d7" />
 
-<img width="412" height="892" alt="Captura de tela 2026-08-17 145757" src="https://github.com/user-attachments/assets/2968348b-dc16-4260-8bf6-dc59bfc57d79" />
+### Home Financeiro
+<img width="433" height="834" alt="Financeiro Home" src="https://github.com/user-attachments/assets/800f8c96-ce5f-48a8-9323-90edfb1b3bcd" />
 
-<img width="454" height="890" alt="Captura de tela 2026-08-17 150007" src="https://github.com/user-attachments/assets/0f4f0270-bc12-4ddb-8197-aaceffb4c966" />
+### Cadastro de despesas
+<img width="525" height="823" alt="Financeiro Cadastro" src="https://github.com/user-attachments/assets/253b520e-764b-478c-95a1-33d4a3b12d9b" />
 
-<img width="440" height="809" alt="Captura de tela 2026-08-17 150001" src="https://github.com/user-attachments/assets/4ac0663d-7419-4247-896f-e469a7431d8b" />
-
-<img width="437" height="887" alt="Captura de tela 2026-08-17 145954" src="https://github.com/user-attachments/assets/d6828ff9-72e1-43bb-9b5e-c640645aa883" />
-
+### Lista de despesas
+<img width="455" height="803" alt="Cad despesas" src="https://github.com/user-attachments/assets/aba35062-bb24-49b5-a74f-2c7d6f9eb85f" />
 
 <img width="399" height="777" alt="Captura de tela 2026-08-09 003945" src="https://github.com/user-attachments/assets/5a5736a5-21fa-449e-aced-077a4d4dc033" />
 
-<img width="455" height="803" alt="Captura de tela 2026-08-09 004248" src="https://github.com/user-attachments/assets/6ca83022-f574-4a74-b781-bfa6cfb2cf9e" />
+
+
+
 
