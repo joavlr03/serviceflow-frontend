@@ -1084,3 +1084,22 @@ A variável `VITE_API_URL` aponta por padrão para `http://localhost:9000/api/v2
 - Ordens de serviço e mudança de status.
 - Despesas, agenda, dashboard e financeiro.
 - IDs numéricos da API normalizados para o roteamento do frontend.
+
+## Telas
+
+### Tela de Login 
+
+<img width="456" height="873" alt="Captura de tela 2026-08-17 145743" src="https://github.com/user-attachments/assets/075e9eda-e2a7-4547-953d-1906c72534c8" />
+
+<img width="433" height="834" alt="Captura de tela 2026-08-17 145855" src="https://github.com/user-attachments/assets/4a47fbd5-2599-4e7d-b990-4355836a570f" />
+
+<img width="412" height="892" alt="Captura de tela 2026-08-17 145757" src="https://github.com/user-attachments/assets/2968348b-dc16-4260-8bf6-dc59bfc57d79" />
+
+<img width="454" height="890" alt="Captura de tela 2026-08-17 150007" src="https://github.com/user-attachments/assets/0f4f0270-bc12-4ddb-8197-aaceffb4c966" />
+
+<img width="440" height="809" alt="Captura de tela 2026-08-17 150001" src="https://github.com/user-attachments/assets/4ac0663d-7419-4247-896f-e469a7431d8b" />
+
+<img width="437" height="887" alt="Captura de tela 2026-08-17 145954" src="https://github.com/user-attachments/assets/d6828ff9-72e1-43bb-9b5e-c640645aa883" />
+
+
+
