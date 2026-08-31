@@ -29,16 +29,16 @@ O projeto foi scaffoldado via **Lovable** (IA generativa para UI) e usa **TanSta
 
 | Login | Dashboard |
 |:-----:|:---------:|
-| ![Login]<img width="456" height="873" alt="Login" src="https://github.com/user-attachments/assets/948d6e7c-d9dd-4b85-9a57-b50bfac3ef33" /> | ![Dashboard]<img width="412" height="892" alt="Inicio" src="https://github.com/user-attachments/assets/81a740b1-3ba2-42d5-a0ee-6399efc4ba4d" />
+| <img width="456" height="873" alt="Login" src="https://github.com/user-attachments/assets/948d6e7c-d9dd-4b85-9a57-b50bfac3ef33" /> | <img width="412" height="892" alt="Inicio" src="https://github.com/user-attachments/assets/81a740b1-3ba2-42d5-a0ee-6399efc4ba4d" />
 
 | Agenda de Clientes | Perfil do Cliente |
 |:---------:|:--------:|
-| ![Agenda]<img width="399" height="777" alt="Agenda de Clientes" src="https://github.com/user-attachments/assets/e1289c4c-415b-4ded-9149-aa01fac9c960" /> | ![Perfil]<img width="442" height="810" alt="Cliente Perfil" src="https://github.com/user-attachments/assets/a1dd323c-98d6-4aac-94b6-14d4d19f44d7" />
+| <img width="399" height="777" alt="Agenda de Clientes" src="https://github.com/user-attachments/assets/e1289c4c-415b-4ded-9149-aa01fac9c960" /> | <img width="442" height="810" alt="Cliente Perfil" src="https://github.com/user-attachments/assets/a1dd323c-98d6-4aac-94b6-14d4d19f44d7" />
  |
 
 | Dashboard Financeiro | Cadastro de Despesas |
 |:-----------:|:--------:|
-| ![Financeiro]<img width="433" height="834" alt="Financeiro Home" src="https://github.com/user-attachments/assets/800f8c96-ce5f-48a8-9323-90edfb1b3bcd" /> | ![Despesas] <img width="455" height="803" alt="Cad despesas" src="https://github.com/user-attachments/assets/aba35062-bb24-49b5-a74f-2c7d6f9eb85f" />
+| <img width="433" height="834" alt="Financeiro Home" src="https://github.com/user-attachments/assets/800f8c96-ce5f-48a8-9323-90edfb1b3bcd" /> | <img width="455" height="803" alt="Cad despesas" src="https://github.com/user-attachments/assets/aba35062-bb24-49b5-a74f-2c7d6f9eb85f" />
  |
 
 ---
