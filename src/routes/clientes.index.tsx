@@ -31,7 +31,7 @@ export const Route = createFileRoute("/clientes/")({
 });
 
 function Clientes() {
-  const { clients, vehiclesOfClient, ordersOfClient, addClient } = useStore();
+  const { clients, vehiclesOfClient, ordersOfClient, addClient, usaVeiculo } = useStore();
   const t = useTermos();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -96,10 +96,14 @@ function Clientes() {
                   <Phone className="h-3 w-3" /> {c.phone}
                 </p>
                 <p className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Car className="h-3 w-3" /> {cars.length} veículo(s)
-                  </span>
-                  <span>•</span>
+                  {usaVeiculo ? (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <Car className="h-3 w-3" /> {cars.length} veículo(s)
+                      </span>
+                      <span>•</span>
+                    </>
+                  ) : null}
                   <span>
                     {history.length} {t.atendimentos}
                   </span>

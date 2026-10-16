@@ -45,7 +45,7 @@ function dayList() {
 }
 
 function Agenda() {
-  const { orders, clientById, vehicleById, orderTitle } = useStore();
+  const { orders, clientById, vehicleById, vehicleLabel, orderTitle } = useStore();
   const t = useTermos();
   const [day, setDay] = useState(todayISO());
   const [status, setStatus] = useState<OrderStatus | "TODOS">("TODOS");
@@ -167,7 +167,7 @@ function Agenda() {
                   <StatusBadge status={o.status} />
                 </div>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                  {vehicle?.brand} {vehicle?.model} • {vehicle?.plate}
+                  {[vehicleLabel(o.vehicleId), vehicle?.plate].filter(Boolean).join(" • ")}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{orderTitle(o)}</span>

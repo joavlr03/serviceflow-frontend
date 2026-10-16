@@ -93,4 +93,5 @@ export interface Company {
   plan: string;
   themeColor?: string | null; // #RRGGBB; null = cor padrão
   usageMode?: "SERVICOS" | "VENDAS";
+  usesVehicle?: boolean; // ausente = true (lava-rápido, oficina)
 }

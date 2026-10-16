@@ -41,6 +41,7 @@ function NovaOS() {
     addVehicle,
     company,
     products,
+    usaVeiculo,
   } = useStore();
   const t = useTermos();
   const services = useMemo(() => allServices.filter((s) => s.active), [allServices]);
@@ -109,8 +110,8 @@ function NovaOS() {
         toast.error("Selecione um cliente");
         return;
       }
-      let finalVehicleId = vehicleId;
-      if (!finalVehicleId || finalVehicleId === "__new") {
+      let finalVehicleId = usaVeiculo ? vehicleId : "";
+      if (usaVeiculo && (!finalVehicleId || finalVehicleId === "__new")) {
         if (!newVehicle.brand.trim() || !newVehicle.model.trim()) {
           toast.error("Informe a marca e o modelo do veículo");
           return;
@@ -221,57 +222,62 @@ function NovaOS() {
               </div>
             ) : null}
 
-            <Field label="Veículo">
-              <select
-                className={inputClass}
-                value={vehicleId}
-                onChange={(e) => setVehicleId(e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {cars.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.brand} {v.model} — {v.plate}
-                  </option>
-                ))}
-                <option value="__new">+ Novo veículo</option>
-              </select>
-            </Field>
+            {usaVeiculo ? (
+              <>
+                <Field label="Veículo">
+                  <select
+                    className={inputClass}
+                    value={vehicleId}
+                    onChange={(e) => setVehicleId(e.target.value)}
+                  >
+                    <option value="">Selecione</option>
+                    {cars.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.brand} {v.model}
+                        {v.plate ? ` — ${v.plate}` : ""}
+                      </option>
+                    ))}
+                    <option value="__new">+ Novo veículo</option>
+                  </select>
+                </Field>
 
-            {vehicleId === "__new" ||
-            (isNewClient && !vehicleId) ||
-            (!vehicleId && cars.length === 0) ? (
-              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
-                <Field label="Marca">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.brand}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, brand: e.target.value })}
-                  />
-                </Field>
-                <Field label="Modelo">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.model}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
-                  />
-                </Field>
-                <Field label="Placa">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.plate}
-                    onChange={(e) =>
-                      setNewVehicle({ ...newVehicle, plate: e.target.value.toUpperCase() })
-                    }
-                  />
-                </Field>
-                <Field label="Cor">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.color}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
-                  />
-                </Field>
-              </div>
+                {vehicleId === "__new" ||
+                (isNewClient && !vehicleId) ||
+                (!vehicleId && cars.length === 0) ? (
+                  <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
+                    <Field label="Marca">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.brand}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, brand: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Modelo">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.model}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Placa">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.plate}
+                        onChange={(e) =>
+                          setNewVehicle({ ...newVehicle, plate: e.target.value.toUpperCase() })
+                        }
+                      />
+                    </Field>
+                    <Field label="Cor">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.color}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </>
         ) : null}
@@ -432,16 +438,22 @@ function NovaOS() {
                   k: "Cliente",
                   v: isNewClient ? newClient.name : clients.find((c) => c.id === clientId)?.name,
                 },
-                {
-                  k: "Veículo",
-                  v:
-                    vehicleId && vehicleId !== "__new"
-                      ? (() => {
-                          const v = cars.find((x) => x.id === vehicleId);
-                          return v ? `${v.brand} ${v.model} — ${v.plate}` : "—";
-                        })()
-                      : `${newVehicle.brand} ${newVehicle.model}`,
-                },
+                ...(usaVeiculo
+                  ? [
+                      {
+                        k: "Veículo",
+                        v:
+                          vehicleId && vehicleId !== "__new"
+                            ? (() => {
+                                const v = cars.find((x) => x.id === vehicleId);
+                                return v
+                                  ? `${v.brand} ${v.model}${v.plate ? ` — ${v.plate}` : ""}`
+                                  : "—";
+                              })()
+                            : `${newVehicle.brand} ${newVehicle.model}`,
+                      },
+                    ]
+                  : []),
                 vendas
                   ? { k: "Produtos", v: itemsText }
                   : { k: "Serviço", v: services.find((s) => s.id === serviceId)?.name },

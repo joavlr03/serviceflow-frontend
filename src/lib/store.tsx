@@ -53,6 +53,10 @@ interface StoreValue {
   orderTitle: (o: ServiceOrder) => string;
   clientById: (id: string) => Client | undefined;
   vehicleById: (id: string) => Vehicle | undefined;
+  /** false quando a empresa não atende veículos: as telas escondem os campos. */
+  usaVeiculo: boolean;
+  /** "Fiat Uno", ou "" quando o atendimento não tem veículo. */
+  vehicleLabel: (id: string) => string;
   serviceById: (id: string) => ServiceType | undefined;
   vehiclesOfClient: (id: string) => Vehicle[];
   ordersOfClient: (id: string) => ServiceOrder[];
@@ -228,6 +232,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteProduct,
       clientById: (id) => clients.find((x) => x.id === id),
       vehicleById: (id) => vehicles.find((x) => x.id === id),
+      usaVeiculo: company.usesVehicle !== false,
+      vehicleLabel: (id) => {
+        const v = vehicles.find((x) => x.id === id);
+        return v ? `${v.brand} ${v.model}`.trim() : "";
+      },
       serviceById: (id) => services.find((x) => x.id === id),
       orderTitle: (o) =>
         o.items?.length

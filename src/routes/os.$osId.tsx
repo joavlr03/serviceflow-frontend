@@ -70,7 +70,7 @@ function OsDetail() {
       "",
       `Data: ${formatDate(order.date)}`,
       `Horário: ${order.time}`,
-      `Veículo: ${vehicle?.brand ?? ""} ${vehicle?.model ?? ""}`.trim(),
+      ...(vehicle ? [`Veículo: ${vehicle.brand} ${vehicle.model}`.trim()] : []),
       `Serviço: ${title}`,
       `Valor: ${brl(order.price)}`,
       "",
@@ -101,8 +101,12 @@ function OsDetail() {
   const rows = [
     { k: "Cliente", v: client?.name },
     { k: "Telefone", v: client?.phone },
-    { k: "Veículo", v: `${vehicle?.brand ?? ""} ${vehicle?.model ?? ""}` },
-    { k: "Placa", v: vehicle?.plate },
+    ...(vehicle
+      ? [
+          { k: "Veículo", v: `${vehicle.brand} ${vehicle.model}` },
+          { k: "Placa", v: vehicle.plate },
+        ]
+      : []),
     { k: order.items?.length ? "Produtos" : "Serviço", v: title },
     { k: "Data", v: formatDate(order.date) },
     { k: "Horário", v: order.time },

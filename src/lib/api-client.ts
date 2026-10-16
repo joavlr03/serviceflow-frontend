@@ -34,10 +34,10 @@ type ApiService = Omit<ServiceType, "id"> & { id: number };
 type ApiCategory = Omit<Category, "id"> & { id: number };
 type ApiProduct = Omit<Product, "id"> & { id: number };
 type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId" | "items"> & {
+  vehicleId: number | null;
   items?: Array<{ productId: number; name: string; quantity: number; unitPrice: number }>;
   id: number;
   clientId: number;
-  vehicleId: number;
   serviceId: number | null;
 };
 type ApiExpense = Omit<Expense, "id"> & { id: number };
@@ -200,7 +200,7 @@ const order = (x: ApiOrder): ServiceOrder => ({
   // API ainda gera "OS-1042"; nas telas o termo é "Atendimento"
   code: String(x.code).replace(/^OS-/, "AT-"),
   clientId: String(x.clientId),
-  vehicleId: String(x.vehicleId),
+  vehicleId: x.vehicleId == null ? "" : String(x.vehicleId),
   serviceId: x.serviceId == null ? "" : String(x.serviceId),
   items: (x.items ?? []).map((i) => ({ ...i, productId: String(i.productId) })),
   time: String(x.time).slice(0, 5),
@@ -209,7 +209,7 @@ const order = (x: ApiOrder): ServiceOrder => ({
 const orderBody = (x: Omit<ServiceOrder, "id" | "code" | "status">) => ({
   ...x,
   clientId: Number(x.clientId),
-  vehicleId: Number(x.vehicleId),
+  vehicleId: x.vehicleId ? Number(x.vehicleId) : null,
   serviceId: x.serviceId ? Number(x.serviceId) : null,
   items: x.items?.map((i) => ({ productId: Number(i.productId), quantity: i.quantity })),
 });

@@ -34,7 +34,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { company, orders, clientById, vehicleById, orderTitle } = useStore();
+  const { company, orders, clientById, vehicleLabel, orderTitle } = useStore();
   const t = useTermos();
   const today = todayISO();
   const todays = orders
@@ -69,8 +69,7 @@ function Dashboard() {
               <div className="min-w-0">
                 <p className="truncate text-base font-bold">{clientById(next.clientId)?.name}</p>
                 <p className="truncate text-xs opacity-75">
-                  {orderTitle(next)} • {vehicleById(next.vehicleId)?.brand}{" "}
-                  {vehicleById(next.vehicleId)?.model}
+                  {[orderTitle(next), vehicleLabel(next.vehicleId)].filter(Boolean).join(" • ")}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-brand-accent px-3 py-1.5 text-sm font-bold text-secondary-foreground">
@@ -135,7 +134,6 @@ function Dashboard() {
         <div className="space-y-2.5">
           {todays.map((o) => {
             const client = clientById(o.clientId);
-            const vehicle = vehicleById(o.vehicleId);
             return (
               <Link
                 key={o.id}
@@ -150,7 +148,7 @@ function Dashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{client?.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {vehicle?.brand} {vehicle?.model} • {orderTitle(o)}
+                    {[vehicleLabel(o.vehicleId), orderTitle(o)].filter(Boolean).join(" • ")}
                   </p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <StatusBadge status={o.status} />
