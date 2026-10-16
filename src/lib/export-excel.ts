@@ -1,7 +1,7 @@
 import writeExcelFile from "write-excel-file/browser";
 import type { Cell, Row } from "write-excel-file/browser";
 import { paymentText, statusMap } from "@/components/app/ui-bits";
-import type { Client, Company, Expense, ServiceOrder, ServiceType, Vehicle } from "./types";
+import type { Client, Company, Expense, Income, ServiceOrder, ServiceType, Vehicle } from "./types";
 
 // Nomes dos campos da planilha universal. A estrutura é a mesma para toda empresa; só os nomes mudam.
 // shortcut: um único mapa para todos os segmentos; vira mapa por segmento/empresa quando aparecer o primeiro caso diferente.
@@ -12,6 +12,7 @@ export const termos = {
   veiculo: "Veículo",
   servico: "Serviço",
   despesas: "Despesas",
+  entradas: "Entradas avulsas",
 };
 
 export interface ExportInput {
@@ -20,8 +21,10 @@ export interface ExportInput {
   to: string;
   orders: ServiceOrder[];
   expenses: Expense[];
+  incomes: Income[];
   summary: {
-    realized: number;
+    realized: number; // atendimentos finalizados + entradas avulsas
+    inc: number;
     forecast: number;
     exp: number;
     profit: number;
@@ -48,6 +51,7 @@ export function buildSheets(x: ExportInput) {
   const usaVeiculo = x.orders.some((o) => o.vehicleId);
   const orders = [...x.orders].sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
   const expenses = [...x.expenses].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const incomes = [...x.incomes].sort((a, b) => (a.date < b.date ? -1 : 1));
   const s = x.summary;
 
   const resumo: Row[] = [
@@ -56,6 +60,8 @@ export function buildSheets(x: ExportInput) {
     [],
     [bold("Indicador"), bold("Valor")],
     ["Receita realizada", money(s.realized)],
+    [`  de ${termos.atendimentos.toLowerCase()}`, money(s.realized - s.inc)],
+    [`  de ${termos.entradas.toLowerCase()}`, money(s.inc)],
     ["Receita prevista", money(s.forecast)],
     [termos.despesas, money(s.exp)],
     [bold("Lucro"), moneyBold(s.profit)],
@@ -95,13 +101,13 @@ export function buildSheets(x: ExportInput) {
     [
       { value: "Total realizado (finalizados)", fontWeight: "bold", columnSpan: headAt.length - 1 },
       ...Array(headAt.length - 2).fill(null),
-      moneyBold(s.realized),
+      moneyBold(s.realized - s.inc),
     ],
   ];
 
-  const despesas: Row[] = [
+  const lancamentos = (list: Expense[], total: number): Row[] => [
     ["Data", "Descrição", "Categoria", "Observação", "Valor"].map(bold),
-    ...expenses.map((e): Row => [
+    ...list.map((e): Row => [
       date(e.date),
       e.description,
       e.category,
@@ -109,8 +115,10 @@ export function buildSheets(x: ExportInput) {
       money(e.amount),
     ]),
     [],
-    [{ value: "Total", fontWeight: "bold", columnSpan: 4 }, null, null, null, moneyBold(s.exp)],
+    [{ value: "Total", fontWeight: "bold", columnSpan: 4 }, null, null, null, moneyBold(total)],
   ];
+  const despesas = lancamentos(expenses, s.exp);
+  const entradas = lancamentos(incomes, s.inc);
 
   const w = (...widths: number[]) => widths.map((width) => ({ width }));
   return [
@@ -121,6 +129,7 @@ export function buildSheets(x: ExportInput) {
       columns: w(10, 12, 9, 24, ...(usaVeiculo ? [24] : []), 22, 12, 16, 14),
       stickyRowsCount: 1,
     },
+    { data: entradas, sheet: termos.entradas, columns: w(12, 28, 18, 28, 14), stickyRowsCount: 1 },
     { data: despesas, sheet: termos.despesas, columns: w(12, 28, 18, 28, 14), stickyRowsCount: 1 },
   ];
 }

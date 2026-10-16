@@ -80,8 +80,10 @@ function Configuracoes() {
             <Receipt className="h-5 w-5" />
           </span>
           <div className="flex-1">
-            <p className="text-sm font-semibold">Categorias de despesa</p>
-            <p className="text-xs text-muted-foreground">Organize seus gastos do seu jeito</p>
+            <p className="text-sm font-semibold">Categorias</p>
+            <p className="text-xs text-muted-foreground">
+              Organize despesas e entradas do seu jeito
+            </p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>

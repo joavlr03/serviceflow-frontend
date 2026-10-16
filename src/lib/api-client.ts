@@ -2,6 +2,7 @@ import type {
   Client,
   Company,
   Expense,
+  Income,
   OrderPayment,
   OrderStatus,
   ServiceOrder,
@@ -37,6 +38,7 @@ type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId"
   serviceId: number;
 };
 type ApiExpense = Omit<Expense, "id"> & { id: number };
+type ApiIncome = Omit<Income, "id"> & { id: number };
 type ApiCompany = Omit<Company, "id"> & { id: number };
 
 export class ApiError extends Error {
@@ -245,7 +247,14 @@ export const api = {
       }),
     ),
   deleteService: (id: string) => request<void>(`/servicos/${id}`, { method: "DELETE" }),
-  categories: async () => (await request<ApiCategory[]>("/categorias?tipo=DESPESA")).map(category),
+  categories: async () =>
+    (
+      await Promise.all(
+        ["DESPESA", "ENTRADA"].map((tipo) => request<ApiCategory[]>(`/categorias?tipo=${tipo}`)),
+      )
+    )
+      .flat()
+      .map(category),
   saveCategory: async (id: string | null, x: Omit<Category, "id">) =>
     category(
       await request<ApiCategory>(id ? `/categorias/${id}` : "/categorias", {
@@ -294,4 +303,8 @@ export const api = {
     (await request<ApiExpense[]>(`/despesas?${operationalPeriod()}`)).map(expense),
   createExpense: async (x: Omit<Expense, "id">) =>
     expense(await request<ApiExpense>("/despesas", { method: "POST", body: JSON.stringify(x) })),
+  incomes: async () =>
+    (await request<ApiIncome[]>(`/entradas?${operationalPeriod()}`)).map(expense),
+  createIncome: async (x: Omit<Income, "id">) =>
+    expense(await request<ApiIncome>("/entradas", { method: "POST", body: JSON.stringify(x) })),
 };

@@ -64,6 +64,9 @@ export interface Expense {
   notes?: string;
 }
 
+// Entrada avulsa: receita que não vem de atendimento. Mesmo formato da despesa.
+export type Income = Expense;
+
 export interface Company {
   id: string;
   name: string;

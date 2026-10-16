@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Download, Receipt } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Download, HandCoins, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis } from "recharts";
 import {
@@ -67,7 +67,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 function Financeiro() {
-  const { company, orders, expenses, clientById, vehicleById, serviceById } = useStore();
+  const { company, orders, expenses, incomes, clientById, vehicleById, serviceById } = useStore();
   const [period, setPeriod] = useState<Period>("mes");
   const [exporting, setExporting] = useState(false);
 
@@ -81,10 +81,16 @@ function Financeiro() {
     const finished = os.filter((o) => o.status === "FINALIZADO");
     const scheduled = os.filter((o) => o.status === "AGENDADO");
     const canceled = os.filter((o) => o.status === "CANCELADO");
-    const realized = finished.reduce((s, o) => s + o.price, 0);
+    // Entradas avulsas somam na receita (realizada e prevista); o ticket médio fica só com atendimentos.
+    const ordersRealized = finished.reduce((s, o) => s + o.price, 0);
+    const periodIncomes = incomes.filter((e) => inRange(e.date));
+    const inc = periodIncomes.reduce((s, e) => s + e.amount, 0);
+    const realized = ordersRealized + inc;
     const forecast = realized + scheduled.reduce((s, o) => s + o.price, 0);
     const periodExpenses = expenses.filter((e) => inRange(e.date));
     const exp = periodExpenses.reduce((s, e) => s + e.amount, 0);
+    const sumOn = (list: typeof expenses, d: string) =>
+      list.filter((e) => e.date === d).reduce((s, e) => s + e.amount, 0);
 
     const byService = new Map<string, { count: number; total: number }>();
     finished.forEach((o) => {
@@ -97,7 +103,7 @@ function Financeiro() {
     const sumOrders = (pick: (o: ServiceOrder) => boolean) =>
       finished.filter(pick).reduce((s, o) => s + o.price, 0);
 
-    // Hoje: receita por horário (despesa não tem hora). Semana/Mês: um ponto por dia.
+    // Hoje: receita de atendimentos por horário (entrada e despesa não têm hora). Semana/Mês: um ponto por dia.
     let series: Array<{ label: string; receita: number; despesa?: number; lucro?: number }>;
     if (period === "hoje") {
       const hours = [...new Set(finished.map((o) => o.time.slice(0, 2)))].sort();
@@ -108,10 +114,8 @@ function Financeiro() {
     } else {
       series = [];
       for (let d = from; d <= end; d = shiftISO(d, 1)) {
-        const receita = sumOrders((o) => o.date === d);
-        const despesa = periodExpenses
-          .filter((e) => e.date === d)
-          .reduce((s, e) => s + e.amount, 0);
+        const receita = sumOrders((o) => o.date === d) + sumOn(periodIncomes, d);
+        const despesa = sumOn(periodExpenses, d);
         const label =
           period === "semana"
             ? parseISO(d).toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")
@@ -125,9 +129,12 @@ function Financeiro() {
       byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + e.amount),
     );
 
-    const prevRealized = orders
-      .filter((o) => o.status === "FINALIZADO" && o.date >= prevFrom && o.date <= prevTo)
-      .reduce((s, o) => s + o.price, 0);
+    const inPrev = (d: string) => d >= prevFrom && d <= prevTo;
+    const prevRealized =
+      orders
+        .filter((o) => o.status === "FINALIZADO" && inPrev(o.date))
+        .reduce((s, o) => s + o.price, 0) +
+      incomes.filter((e) => inPrev(e.date)).reduce((s, e) => s + e.amount, 0);
     const prevExp = expenses
       .filter((e) => e.date >= prevFrom && e.date <= prevTo)
       .reduce((s, e) => s + e.amount, 0);
@@ -135,6 +142,8 @@ function Financeiro() {
     return {
       os,
       periodExpenses,
+      periodIncomes,
+      inc,
       series,
       categories: [...byCategory.entries()].sort((a, b) => b[1] - a[1]),
       previous: { realized: prevRealized, exp: prevExp, profit: prevRealized - prevExp },
@@ -144,10 +153,10 @@ function Financeiro() {
       profit: realized - exp,
       finished: finished.length,
       canceled: canceled.length,
-      ticket: finished.length ? realized / finished.length : 0,
+      ticket: finished.length ? ordersRealized / finished.length : 0,
       ranking: [...byService.entries()].sort((a, b) => b[1].total - a[1].total),
     };
-  }, [orders, expenses, from, to, period, serviceById]);
+  }, [orders, expenses, incomes, from, to, period, serviceById]);
 
   const max = data.ranking[0]?.[1].total ?? 1;
   const maxCategory = data.categories[0]?.[1] ?? 1;
@@ -204,6 +213,7 @@ function Financeiro() {
                 to,
                 orders: data.os,
                 expenses: data.periodExpenses,
+                incomes: data.periodIncomes,
                 summary: data,
                 clientById,
                 vehicleById,
@@ -313,7 +323,8 @@ function Financeiro() {
         </div>
         {period === "hoje" && !empty ? (
           <p className="mt-1.5 text-[11px] text-muted-foreground">
-            Despesas do dia: {brl(data.exp)} (despesas não têm horário).
+            Entradas avulsas do dia: {brl(data.inc)} • Despesas do dia: {brl(data.exp)} (não têm
+            horário).
           </p>
         ) : null}
       </section>
@@ -440,7 +451,20 @@ function Financeiro() {
         </div>
       </section>
 
-      <section className="px-5 pb-8 pt-5">
+      <section className="space-y-2.5 px-5 pb-8 pt-5">
+        <Link
+          to="/entradas"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/10 text-emerald-600">
+            <HandCoins className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Entradas avulsas</p>
+            <p className="text-xs text-muted-foreground">Vendas, comissões e outras receitas</p>
+          </div>
+          <span className="text-sm font-bold">{brl(data.inc)}</span>
+        </Link>
         <Link
           to="/despesas"
           className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"

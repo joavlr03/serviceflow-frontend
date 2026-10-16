@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -29,10 +29,15 @@ import type { Category } from "@/lib/types";
 export const Route = createFileRoute("/categorias")({
   head: () => ({
     meta: [
-      { title: "Categorias de despesa | ServiceFlow" },
-      { name: "description", content: "Cadastre as categorias de despesa da sua empresa." },
+      { title: "Categorias | ServiceFlow" },
+      {
+        name: "description",
+        content: "Cadastre as categorias de despesa e de entrada da sua empresa.",
+      },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { tipo?: Category["type"] } =>
+    s["tipo"] === "ENTRADA" ? { tipo: "ENTRADA" } : {},
   component: Categorias,
 });
 
@@ -46,7 +51,9 @@ const errorMessage = (error: unknown) =>
       : "Não foi possível salvar a categoria";
 
 function Categorias() {
-  const { categories, saveCategory, deleteCategory } = useStore();
+  const { categories: all, saveCategory, deleteCategory } = useStore();
+  const type = Route.useSearch().tipo ?? "DESPESA";
+  const categories = all.filter((c) => c.type === type);
   // null = fechado; "" = nova categoria; id = editando
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -70,7 +77,7 @@ function Categorias() {
     try {
       await saveCategory(editingId || null, {
         name: form.name.trim(),
-        type: "DESPESA",
+        type,
         active: form.active,
       });
       toast.success("Categoria salva");
@@ -98,7 +105,7 @@ function Categorias() {
   return (
     <PhoneShell fab={false}>
       <TopBar
-        title="Categorias de despesa"
+        title="Categorias"
         subtitle={`${categories.length} cadastradas`}
         backTo="/configuracoes"
         action={
@@ -111,6 +118,29 @@ function Categorias() {
           </button>
         }
       />
+
+      <div className="flex gap-2 px-5 pt-4">
+        {(
+          [
+            ["DESPESA", "Despesa"],
+            ["ENTRADA", "Entrada"],
+          ] as const
+        ).map(([key, label]) => (
+          <Link
+            key={key}
+            to="/categorias"
+            search={key === "ENTRADA" ? { tipo: key } : {}}
+            onClick={close}
+            className={`flex-1 rounded-full py-2 text-center text-xs font-semibold transition-colors ${
+              type === key
+                ? "bg-secondary text-secondary-foreground"
+                : "border border-border bg-card text-muted-foreground"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
 
       <section className="space-y-2.5 px-5 pb-8 pt-4">
         {categories.map((c) => (
@@ -131,7 +161,7 @@ function Categorias() {
         {categories.length === 0 ? (
           <EmptyState
             title="Nenhuma categoria cadastrada"
-            description="Toque no + para cadastrar a primeira categoria de despesa."
+            description="Toque no + para cadastrar a primeira categoria."
           />
         ) : null}
       </section>
@@ -161,7 +191,7 @@ function Categorias() {
                 <span>
                   <span className="block text-sm font-semibold">Ativa</span>
                   <span className="block text-[11px] text-muted-foreground">
-                    Inativa não aparece ao lançar despesa, mas fica no histórico.
+                    Inativa não aparece ao lançar, mas fica no histórico.
                   </span>
                 </span>
                 <Switch
@@ -173,7 +203,7 @@ function Categorias() {
               </div>
               {renaming ? (
                 <p className="text-[11px] text-muted-foreground">
-                  As despesas já lançadas em "{originalName}" passam para o novo nome.
+                  Os lançamentos já feitos em "{originalName}" passam para o novo nome.
                 </p>
               ) : null}
               <PrimaryButton onClick={save} disabled={saving}>
@@ -195,7 +225,7 @@ function Categorias() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir categoria?</AlertDialogTitle>
             <AlertDialogDescription>
-              Categoria que já foi usada em alguma despesa não pode ser excluída; nesse caso,
+              Categoria que já foi usada em algum lançamento não pode ser excluída; nesse caso,
               desative-a.
             </AlertDialogDescription>
           </AlertDialogHeader>

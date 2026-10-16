@@ -13,6 +13,7 @@ import type {
   Client,
   Company,
   Expense,
+  Income,
   OrderPayment,
   OrderStatus,
   ServiceOrder,
@@ -28,6 +29,7 @@ interface StoreValue {
   services: ServiceType[];
   orders: ServiceOrder[];
   expenses: Expense[];
+  incomes: Income[];
   categories: Category[];
   loading: boolean;
   addClient: (c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
@@ -37,6 +39,7 @@ interface StoreValue {
   updateOrder: (id: string, patch: Partial<ServiceOrder>) => Promise<void>;
   setOrderStatus: (id: string, status: OrderStatus, payment?: OrderPayment) => Promise<void>;
   addExpense: (e: Omit<Expense, "id">) => Promise<void>;
+  addIncome: (e: Omit<Income, "id">) => Promise<void>;
   setThemeColor: (color: string) => Promise<void>;
   saveService: (id: string | null, s: Omit<ServiceType, "id">) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
@@ -58,19 +61,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [services, setServices] = useState<ServiceType[]>([]),
     [orders, setOrders] = useState<ServiceOrder[]>([]),
     [expenses, setExpenses] = useState<Expense[]>([]),
+    [incomes, setIncomes] = useState<Income[]>([]),
     [categories, setCategories] = useState<Category[]>([]),
     [loading, setLoading] = useState(false);
   const reload = useCallback(async () => {
     if (!(await ensureSession())) return;
     setLoading(true);
     try {
-      const [co, cs, ss, os, es, cats] = await Promise.all([
+      const [co, cs, ss, os, es, cats, ins] = await Promise.all([
         api.company(),
         api.clients(),
         api.services(),
         api.orders(),
         api.expenses(),
         api.categories(),
+        api.incomes(),
       ]);
       const vs = (await Promise.all(cs.map((c) => api.clientVehicles(c.id)))).flat();
       setCompany(co);
@@ -79,6 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setServices(ss);
       setOrders(os);
       setExpenses(es);
+      setIncomes(ins);
       setCategories(cats.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
       setVehicles(vs);
     } finally {
@@ -128,6 +134,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     [orders],
   );
+  const addIncome = useCallback(async (x: Omit<Income, "id">) => {
+    const e = await api.createIncome(x);
+    setIncomes((p) => [e, ...p]);
+  }, []);
   const addExpense = useCallback(async (x: Omit<Expense, "id">) => {
     const e = await api.createExpense(x);
     setExpenses((p) => [e, ...p]);
@@ -152,11 +162,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const old = categories.find((y) => y.id === id)?.name;
       const c = await api.saveCategory(id, x);
       setCategories((p) =>
-        [...p.filter((y) => y.id !== c.id), c].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+        [...p.filter((y) => y.id !== c.id), c].sort((a, b) =>
+          a.name.localeCompare(b.name, "pt-BR"),
+        ),
       );
-      // A API renomeia as despesas antigas junto; espelha aqui sem recarregar tudo.
+      // A API renomeia os lançamentos antigos junto; espelha aqui sem recarregar tudo.
       if (old && old !== c.name)
-        setExpenses((p) => p.map((e) => (e.category === old ? { ...e, category: c.name } : e)));
+        (c.type === "ENTRADA" ? setIncomes : setExpenses)((p) =>
+          p.map((e) => (e.category === old ? { ...e, category: c.name } : e)),
+        );
     },
     [categories],
   );
@@ -172,6 +186,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       services,
       orders,
       expenses,
+      incomes,
       categories,
       loading,
       addClient,
@@ -181,6 +196,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateOrder,
       setOrderStatus,
       addExpense,
+      addIncome,
       setThemeColor,
       saveService,
       deleteService,
@@ -203,6 +219,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       services,
       orders,
       expenses,
+      incomes,
       categories,
       loading,
       addClient,
@@ -212,6 +229,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateOrder,
       setOrderStatus,
       addExpense,
+      addIncome,
       setThemeColor,
       saveService,
       deleteService,

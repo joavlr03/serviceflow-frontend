@@ -15,6 +15,7 @@ import { Route as CategoriasRouteImport } from './routes/categorias'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DespesasRouteImport } from './routes/despesas'
+import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as SuporteRouteImport } from './routes/suporte'
@@ -51,6 +52,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DespesasRoute = DespesasRouteImport.update({
   id: '/despesas',
   path: '/despesas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntradasRoute = EntradasRouteImport.update({
+  id: '/entradas',
+  path: '/entradas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/despesas': typeof DespesasRoute
+  '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRoute
   '/servicos': typeof ServicosRoute
   '/suporte': typeof SuporteRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/despesas': typeof DespesasRoute
+  '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRoute
   '/servicos': typeof ServicosRoute
   '/suporte': typeof SuporteRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/dashboard': typeof DashboardRoute
   '/despesas': typeof DespesasRoute
+  '/entradas': typeof EntradasRoute
   '/financeiro': typeof FinanceiroRoute
   '/servicos': typeof ServicosRoute
   '/suporte': typeof SuporteRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/despesas'
+    | '/entradas'
     | '/financeiro'
     | '/servicos'
     | '/suporte'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/despesas'
+    | '/entradas'
     | '/financeiro'
     | '/servicos'
     | '/suporte'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/despesas'
+    | '/entradas'
     | '/financeiro'
     | '/servicos'
     | '/suporte'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DashboardRoute: typeof DashboardRoute
   DespesasRoute: typeof DespesasRoute
+  EntradasRoute: typeof EntradasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   ServicosRoute: typeof ServicosRoute
   SuporteRoute: typeof SuporteRoute
@@ -241,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/despesas'
       fullPath: '/despesas'
       preLoaderRoute: typeof DespesasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entradas': {
+      id: '/entradas'
+      path: '/entradas'
+      fullPath: '/entradas'
+      preLoaderRoute: typeof EntradasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financeiro': {
@@ -302,6 +322,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   DashboardRoute: DashboardRoute,
   DespesasRoute: DespesasRoute,
+  EntradasRoute: EntradasRoute,
   FinanceiroRoute: FinanceiroRoute,
   ServicosRoute: ServicosRoute,
   SuporteRoute: SuporteRoute,
