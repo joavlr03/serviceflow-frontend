@@ -17,6 +17,7 @@ import type {
   OrderStatus,
   ServiceOrder,
   ServiceType,
+  Category,
   Vehicle,
 } from "./types";
 
@@ -27,6 +28,7 @@ interface StoreValue {
   services: ServiceType[];
   orders: ServiceOrder[];
   expenses: Expense[];
+  categories: Category[];
   loading: boolean;
   addClient: (c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
   updateClient: (id: string, c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
@@ -38,6 +40,8 @@ interface StoreValue {
   setThemeColor: (color: string) => Promise<void>;
   saveService: (id: string | null, s: Omit<ServiceType, "id">) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
+  saveCategory: (id: string | null, c: Omit<Category, "id">) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
   clientById: (id: string) => Client | undefined;
   vehicleById: (id: string) => Vehicle | undefined;
   serviceById: (id: string) => ServiceType | undefined;
@@ -54,17 +58,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [services, setServices] = useState<ServiceType[]>([]),
     [orders, setOrders] = useState<ServiceOrder[]>([]),
     [expenses, setExpenses] = useState<Expense[]>([]),
+    [categories, setCategories] = useState<Category[]>([]),
     [loading, setLoading] = useState(false);
   const reload = useCallback(async () => {
     if (!(await ensureSession())) return;
     setLoading(true);
     try {
-      const [co, cs, ss, os, es] = await Promise.all([
+      const [co, cs, ss, os, es, cats] = await Promise.all([
         api.company(),
         api.clients(),
         api.services(),
         api.orders(),
         api.expenses(),
+        api.categories(),
       ]);
       const vs = (await Promise.all(cs.map((c) => api.clientVehicles(c.id)))).flat();
       setCompany(co);
@@ -73,6 +79,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setServices(ss);
       setOrders(os);
       setExpenses(es);
+      setCategories(cats.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
       setVehicles(vs);
     } finally {
       setLoading(false);
@@ -140,6 +147,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await api.deleteService(id);
     setServices((p) => p.filter((s) => s.id !== id));
   }, []);
+  const saveCategory = useCallback(
+    async (id: string | null, x: Omit<Category, "id">) => {
+      const old = categories.find((y) => y.id === id)?.name;
+      const c = await api.saveCategory(id, x);
+      setCategories((p) =>
+        [...p.filter((y) => y.id !== c.id), c].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+      );
+      // A API renomeia as despesas antigas junto; espelha aqui sem recarregar tudo.
+      if (old && old !== c.name)
+        setExpenses((p) => p.map((e) => (e.category === old ? { ...e, category: c.name } : e)));
+    },
+    [categories],
+  );
+  const deleteCategory = useCallback(async (id: string) => {
+    await api.deleteCategory(id);
+    setCategories((p) => p.filter((c) => c.id !== id));
+  }, []);
   const value = useMemo<StoreValue>(
     () => ({
       company,
@@ -148,6 +172,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       services,
       orders,
       expenses,
+      categories,
       loading,
       addClient,
       updateClient,
@@ -159,6 +184,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setThemeColor,
       saveService,
       deleteService,
+      saveCategory,
+      deleteCategory,
       clientById: (id) => clients.find((x) => x.id === id),
       vehicleById: (id) => vehicles.find((x) => x.id === id),
       serviceById: (id) => services.find((x) => x.id === id),
@@ -176,6 +203,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       services,
       orders,
       expenses,
+      categories,
       loading,
       addClient,
       updateClient,
@@ -187,6 +215,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setThemeColor,
       saveService,
       deleteService,
+      saveCategory,
+      deleteCategory,
       reload,
     ],
   );

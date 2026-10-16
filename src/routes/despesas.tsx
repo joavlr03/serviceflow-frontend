@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -30,23 +30,14 @@ export const Route = createFileRoute("/despesas")({
   component: Despesas,
 });
 
-const categories: ExpenseCategory[] = [
-  "Produtos",
-  "Água e Energia",
-  "Aluguel",
-  "Funcionários",
-  "Manutenção",
-  "Impostos",
-  "Fornecedores",
-  "Outros",
-];
-
 function Despesas() {
-  const { expenses, addExpense } = useStore();
+  const { expenses, addExpense, categories } = useStore();
+  const active = categories.filter((c) => c.active);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     description: "",
-    category: "Produtos" as ExpenseCategory,
+    // "" = primeira categoria ativa
+    category: "" as ExpenseCategory,
     amount: "",
     date: todayISO(),
     notes: "",
@@ -116,17 +107,21 @@ function Despesas() {
               <Field label="Categoria">
                 <select
                   className={inputClass}
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm({ ...form, category: e.target.value as ExpenseCategory })
-                  }
+                  value={form.category || active[0]?.name || ""}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
                 >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  {active.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
                     </option>
                   ))}
                 </select>
+                <Link
+                  to="/categorias"
+                  className="mt-1 block text-[11px] font-semibold text-secondary"
+                >
+                  Gerenciar categorias
+                </Link>
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Valor (R$)">
@@ -158,6 +153,11 @@ function Despesas() {
               <PrimaryButton
                 onClick={async () => {
                   const amount = parseMoney(form.amount);
+                  const category = form.category || active[0]?.name;
+                  if (!category) {
+                    toast.error("Cadastre uma categoria em Configurações → Categorias de despesa");
+                    return;
+                  }
                   if (!form.description.trim() || amount <= 0 || !form.date) {
                     toast.error("Informe a descrição, um valor maior que zero e a data");
                     return;
@@ -165,14 +165,14 @@ function Despesas() {
                   try {
                     await addExpense({
                       description: form.description.trim(),
-                      category: form.category,
+                      category,
                       amount,
                       date: form.date,
                       notes: form.notes.trim(),
                     });
                     setForm({
                       description: "",
-                      category: "Produtos",
+                      category: "",
                       amount: "",
                       date: todayISO(),
                       notes: "",

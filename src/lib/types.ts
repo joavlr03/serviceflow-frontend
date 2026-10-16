@@ -45,15 +45,15 @@ export interface ServiceOrder {
 
 export type OrderPayment = Pick<ServiceOrder, "paymentMethod" | "paid">;
 
-export type ExpenseCategory =
-  | "Produtos"
-  | "Água e Energia"
-  | "Aluguel"
-  | "Funcionários"
-  | "Manutenção"
-  | "Impostos"
-  | "Fornecedores"
-  | "Outros";
+// Nome de uma categoria cadastrada pela empresa (tela Categorias).
+export type ExpenseCategory = string;
+
+export interface Category {
+  id: string;
+  name: string;
+  type: "DESPESA" | "ENTRADA";
+  active: boolean;
+}
 
 export interface Expense {
   id: string;

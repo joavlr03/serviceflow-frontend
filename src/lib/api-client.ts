@@ -6,6 +6,7 @@ import type {
   OrderStatus,
   ServiceOrder,
   ServiceType,
+  Category,
   Vehicle,
 } from "./types";
 
@@ -28,6 +29,7 @@ type LoginResult = {
 type ApiClient = Omit<Client, "id"> & { id: number };
 type ApiVehicle = Omit<Vehicle, "id" | "clientId"> & { id: number; clientId: number };
 type ApiService = Omit<ServiceType, "id"> & { id: number };
+type ApiCategory = Omit<Category, "id"> & { id: number };
 type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId"> & {
   id: number;
   clientId: number;
@@ -186,6 +188,7 @@ const vehicle = (x: ApiVehicle): Vehicle => ({
   clientId: String(x.clientId),
 });
 const service = (x: ApiService): ServiceType => ({ ...x, id: String(x.id) });
+const category = (x: ApiCategory): Category => ({ ...x, id: String(x.id) });
 const order = (x: ApiOrder): ServiceOrder => ({
   ...x,
   id: String(x.id),
@@ -242,6 +245,15 @@ export const api = {
       }),
     ),
   deleteService: (id: string) => request<void>(`/servicos/${id}`, { method: "DELETE" }),
+  categories: async () => (await request<ApiCategory[]>("/categorias?tipo=DESPESA")).map(category),
+  saveCategory: async (id: string | null, x: Omit<Category, "id">) =>
+    category(
+      await request<ApiCategory>(id ? `/categorias/${id}` : "/categorias", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(x),
+      }),
+    ),
+  deleteCategory: (id: string) => request<void>(`/categorias/${id}`, { method: "DELETE" }),
   orders: async () =>
     (await request<ApiOrder[]>(`/ordens-servico?${operationalPeriod()}`)).map(order),
   createOrder: async (x: Omit<ServiceOrder, "id" | "code">, idempotencyKey: string) => {
