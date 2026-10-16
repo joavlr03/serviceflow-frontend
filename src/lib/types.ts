@@ -94,4 +94,17 @@ export interface Company {
   themeColor?: string | null; // #RRGGBB; null = cor padrão
   usageMode?: "SERVICOS" | "VENDAS";
   usesVehicle?: boolean; // ausente = true (lava-rápido, oficina)
+  usesDuration?: boolean; // ausente = true
+  onboardingDone?: boolean; // false = cai no assistente de primeiro acesso
+}
+
+export interface OnboardingInput {
+  name: string;
+  segment: string;
+  usageMode: "SERVICOS" | "VENDAS";
+  usesVehicle: boolean;
+  usesDuration: boolean;
+  themeColor: string | null;
+  services: Array<{ name: string; price: number; durationMin?: number }>;
+  products: Array<{ name: string; price: number; stock: number }>;
 }

@@ -376,9 +376,11 @@ function NovaOS() {
                     >
                       <span>
                         <span className="block text-sm font-semibold">{s.name}</span>
-                        <span className="block text-[11px] text-muted-foreground">
-                          Duração aprox. {s.durationMin} min
-                        </span>
+                        {company.usesDuration !== false ? (
+                          <span className="block text-[11px] text-muted-foreground">
+                            Duração aprox. {s.durationMin} min
+                          </span>
+                        ) : null}
                       </span>
                       <span className="text-sm font-bold">{brl(s.price)}</span>
                     </button>

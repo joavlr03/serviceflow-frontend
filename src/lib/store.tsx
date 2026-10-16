@@ -19,6 +19,7 @@ import type {
   ServiceOrder,
   ServiceType,
   Product,
+  OnboardingInput,
   Category,
   Vehicle,
 } from "./types";
@@ -43,6 +44,7 @@ interface StoreValue {
   addExpense: (e: Omit<Expense, "id">) => Promise<void>;
   addIncome: (e: Omit<Income, "id">) => Promise<void>;
   setThemeColor: (color: string) => Promise<void>;
+  completeOnboarding: (x: OnboardingInput) => Promise<void>;
   saveService: (id: string | null, s: Omit<ServiceType, "id">) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
   saveCategory: (id: string | null, c: Omit<Category, "id">) => Promise<void>;
@@ -189,6 +191,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     [categories],
   );
+  const completeOnboarding = useCallback(
+    async (x: OnboardingInput) => {
+      await api.completeOnboarding(x);
+      // Recarrega tudo: empresa, tema e os serviços/produtos que o assistente criou.
+      await reload();
+    },
+    [reload],
+  );
   const saveProduct = useCallback(async (id: string | null, x: Omit<Product, "id">) => {
     const s = await api.saveProduct(id, x);
     setProducts((p) =>
@@ -224,6 +234,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addExpense,
       addIncome,
       setThemeColor,
+      completeOnboarding,
       saveService,
       deleteService,
       saveCategory,
@@ -269,6 +280,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addExpense,
       addIncome,
       setThemeColor,
+      completeOnboarding,
       saveService,
       deleteService,
       saveCategory,

@@ -1,8 +1,9 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, Home, Users, Wallet, Plus } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { ensureSession } from "@/lib/api-client";
 import { useTermos } from "@/lib/termos";
+import { useStore } from "@/lib/store";
 
 const tabs = [
   { to: "/dashboard", label: "Início", icon: Home },
@@ -22,11 +23,18 @@ export function PhoneShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const t = useTermos();
+  const { company } = useStore();
+  const navigate = useNavigate();
   useEffect(() => {
     void ensureSession().then((ok) => {
       if (!ok) window.location.href = "/";
     });
   }, []);
+  // Empresa nova passa pelo assistente antes de usar o app (spec 001).
+  useEffect(() => {
+    if (company.onboardingDone === false && pathname !== "/onboarding")
+      void navigate({ to: "/onboarding", replace: true });
+  }, [company.onboardingDone, pathname, navigate]);
 
   return (
     <div className="min-h-screen bg-muted/60 py-0 sm:py-8">

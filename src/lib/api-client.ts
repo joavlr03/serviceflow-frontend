@@ -4,6 +4,7 @@ import type {
   Expense,
   Income,
   OrderPayment,
+  OnboardingInput,
   OrderStatus,
   ServiceOrder,
   ServiceType,
@@ -228,6 +229,13 @@ export const api = {
   company: async () => {
     const x = await request<ApiCompany>("/empresa");
     return { ...x, id: String(x.id) } as Company;
+  },
+  completeOnboarding: async (x: OnboardingInput) => {
+    const c = await request<ApiCompany>("/empresa/onboarding", {
+      method: "POST",
+      body: JSON.stringify(x),
+    });
+    return { ...c, id: String(c.id) } as Company;
   },
   updateThemeColor: async (color: string) => {
     const x = await request<ApiCompany>("/empresa/tema", {

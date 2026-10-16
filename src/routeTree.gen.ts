@@ -18,6 +18,7 @@ import { Route as DespesasRouteImport } from './routes/despesas'
 import { Route as EntradasRouteImport } from './routes/entradas'
 import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as SuporteRouteImport } from './routes/suporte'
 import { Route as ClientesIndexRouteImport } from './routes/clientes.index'
@@ -70,6 +71,11 @@ const FinanceiroRoute = FinanceiroRouteImport.update({
   path: '/financeiro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicosRoute = ServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/entradas': typeof EntradasRoute
   '/estoque': typeof EstoqueRoute
   '/financeiro': typeof FinanceiroRoute
+  '/onboarding': typeof OnboardingRoute
   '/servicos': typeof ServicosRoute
   '/suporte': typeof SuporteRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/entradas': typeof EntradasRoute
   '/estoque': typeof EstoqueRoute
   '/financeiro': typeof FinanceiroRoute
+  '/onboarding': typeof OnboardingRoute
   '/servicos': typeof ServicosRoute
   '/suporte': typeof SuporteRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/entradas': typeof EntradasRoute
   '/estoque': typeof EstoqueRoute
   '/financeiro': typeof FinanceiroRoute
+  '/onboarding': typeof OnboardingRoute
   '/servicos': typeof ServicosRoute
   '/suporte': typeof SuporteRoute
   '/clientes/$clientId': typeof ClientesClientIdRoute
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
     | '/entradas'
     | '/estoque'
     | '/financeiro'
+    | '/onboarding'
     | '/servicos'
     | '/suporte'
     | '/clientes/$clientId'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/entradas'
     | '/estoque'
     | '/financeiro'
+    | '/onboarding'
     | '/servicos'
     | '/suporte'
     | '/clientes/$clientId'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/entradas'
     | '/estoque'
     | '/financeiro'
+    | '/onboarding'
     | '/servicos'
     | '/suporte'
     | '/clientes/$clientId'
@@ -217,6 +229,7 @@ export interface RootRouteChildren {
   EntradasRoute: typeof EntradasRoute
   EstoqueRoute: typeof EstoqueRoute
   FinanceiroRoute: typeof FinanceiroRoute
+  OnboardingRoute: typeof OnboardingRoute
   ServicosRoute: typeof ServicosRoute
   SuporteRoute: typeof SuporteRoute
   ClientesClientIdRoute: typeof ClientesClientIdRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceiroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/servicos': {
       id: '/servicos'
       path: '/servicos'
@@ -345,6 +365,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntradasRoute: EntradasRoute,
   EstoqueRoute: EstoqueRoute,
   FinanceiroRoute: FinanceiroRoute,
+  OnboardingRoute: OnboardingRoute,
   ServicosRoute: ServicosRoute,
   SuporteRoute: SuporteRoute,
   ClientesClientIdRoute: ClientesClientIdRoute,
