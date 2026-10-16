@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { EmptyState, StatusBadge, TopBar } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
@@ -48,6 +48,22 @@ function Agenda() {
   const [day, setDay] = useState(todayISO());
   const [status, setStatus] = useState<OrderStatus | "TODOS">("TODOS");
   const days = useMemo(dayList, []);
+  const daysRef = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
+  const updateEdge = () => {
+    const el = daysRef.current;
+    if (!el) return;
+    setEdge({
+      start: el.scrollLeft <= 0,
+      end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1,
+    });
+  };
+  useEffect(updateEdge, []);
+  // ~3 dias por clique (botão w-14 + gap-2 = 64px)
+  const scrollDays = (dir: 1 | -1) =>
+    daysRef.current?.scrollBy({ left: dir * 192, behavior: "smooth" });
+  const arrowClass =
+    "hidden w-9 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-foreground transition-opacity disabled:opacity-30 md:flex";
 
   const list = orders
     .filter((o) => o.date === day && (status === "TODOS" || o.status === status))
@@ -59,27 +75,53 @@ function Agenda() {
     <PhoneShell>
       <TopBar title="Agenda" subtitle="Atendimentos por dia e horário" />
 
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4">
-        {days.map((d) => {
-          const date = parseISO(d);
-          const active = d === day;
-          return (
-            <button
-              key={d}
-              onClick={() => setDay(d)}
-              className={`flex w-14 shrink-0 flex-col items-center rounded-2xl border py-2.5 transition-colors ${
-                active
-                  ? "border-transparent bg-brand text-primary-foreground"
-                  : "border-border bg-card text-foreground"
-              }`}
-            >
-              <span className="text-[10px] uppercase opacity-70">
-                {date.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")}
-              </span>
-              <span className="text-base font-bold">{String(date.getDate()).padStart(2, "0")}</span>
-            </button>
-          );
-        })}
+      <div className="flex gap-2 px-5 pt-4">
+        <button
+          type="button"
+          aria-label="Dias anteriores"
+          disabled={edge.start}
+          onClick={() => scrollDays(-1)}
+          className={arrowClass}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div
+          ref={daysRef}
+          onScroll={updateEdge}
+          className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto"
+        >
+          {days.map((d) => {
+            const date = parseISO(d);
+            const active = d === day;
+            return (
+              <button
+                key={d}
+                onClick={() => setDay(d)}
+                className={`flex w-14 shrink-0 flex-col items-center rounded-2xl border py-2.5 transition-colors ${
+                  active
+                    ? "border-transparent bg-brand text-primary-foreground"
+                    : "border-border bg-card text-foreground"
+                }`}
+              >
+                <span className="text-[10px] uppercase opacity-70">
+                  {date.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")}
+                </span>
+                <span className="text-base font-bold">
+                  {String(date.getDate()).padStart(2, "0")}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          aria-label="Próximos dias"
+          disabled={edge.end}
+          onClick={() => scrollDays(1)}
+          className={arrowClass}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4">
