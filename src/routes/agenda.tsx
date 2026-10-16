@@ -44,7 +44,7 @@ function dayList() {
 }
 
 function Agenda() {
-  const { orders, clientById, vehicleById, serviceById } = useStore();
+  const { orders, clientById, vehicleById, orderTitle } = useStore();
   const [day, setDay] = useState(todayISO());
   const [status, setStatus] = useState<OrderStatus | "TODOS">("TODOS");
   const days = useMemo(dayList, []);
@@ -168,9 +168,7 @@ function Agenda() {
                   {vehicle?.brand} {vehicle?.model} • {vehicle?.plate}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {serviceById(o.serviceId)?.name}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{orderTitle(o)}</span>
                   <span className="text-sm font-bold">{brl(o.price)}</span>
                 </div>
               </div>

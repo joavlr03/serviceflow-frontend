@@ -39,12 +39,12 @@ export const Route = createFileRoute("/os/$osId")({
 function OsDetail() {
   const { osId } = useParams({ from: "/os/$osId" });
   const { criada } = Route.useSearch();
-  const { orders, clientById, vehicleById, serviceById, setOrderStatus } = useStore();
+  const { orders, clientById, vehicleById, orderTitle, setOrderStatus } = useStore();
   const order = orders.find((o) => o.id === osId);
 
   const client = order ? clientById(order.clientId) : undefined;
   const vehicle = order ? vehicleById(order.vehicleId) : undefined;
-  const service = order ? serviceById(order.serviceId) : undefined;
+  const title = order ? orderTitle(order) : "";
 
   const defaultMessage = useMemo(() => {
     if (!order) return "";
@@ -56,12 +56,12 @@ function OsDetail() {
       `Data: ${formatDate(order.date)}`,
       `Horário: ${order.time}`,
       `Veículo: ${vehicle?.brand ?? ""} ${vehicle?.model ?? ""}`.trim(),
-      `Serviço: ${service?.name ?? ""}`,
+      `Serviço: ${title}`,
       `Valor: ${brl(order.price)}`,
       "",
       "Obrigado pela preferência!",
     ].join("\n");
-  }, [order, client, vehicle, service]);
+  }, [order, client, vehicle, title]);
 
   const [message, setMessage] = useState(defaultMessage);
   const [editing, setEditing] = useState(false);
@@ -83,7 +83,7 @@ function OsDetail() {
     { k: "Telefone", v: client?.phone },
     { k: "Veículo", v: `${vehicle?.brand ?? ""} ${vehicle?.model ?? ""}` },
     { k: "Placa", v: vehicle?.plate },
-    { k: "Serviço", v: service?.name },
+    { k: order.items?.length ? "Produtos" : "Serviço", v: title },
     { k: "Data", v: formatDate(order.date) },
     { k: "Horário", v: order.time },
     { k: "Valor", v: brl(order.price) },

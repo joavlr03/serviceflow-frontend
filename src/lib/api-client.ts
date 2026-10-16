@@ -7,6 +7,7 @@ import type {
   OrderStatus,
   ServiceOrder,
   ServiceType,
+  Product,
   Category,
   Vehicle,
 } from "./types";
@@ -31,11 +32,13 @@ type ApiClient = Omit<Client, "id"> & { id: number };
 type ApiVehicle = Omit<Vehicle, "id" | "clientId"> & { id: number; clientId: number };
 type ApiService = Omit<ServiceType, "id"> & { id: number };
 type ApiCategory = Omit<Category, "id"> & { id: number };
-type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId"> & {
+type ApiProduct = Omit<Product, "id"> & { id: number };
+type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId" | "items"> & {
+  items?: Array<{ productId: number; name: string; quantity: number; unitPrice: number }>;
   id: number;
   clientId: number;
   vehicleId: number;
-  serviceId: number;
+  serviceId: number | null;
 };
 type ApiExpense = Omit<Expense, "id"> & { id: number };
 type ApiIncome = Omit<Income, "id"> & { id: number };
@@ -198,8 +201,17 @@ const order = (x: ApiOrder): ServiceOrder => ({
   code: String(x.code).replace(/^OS-/, "AT-"),
   clientId: String(x.clientId),
   vehicleId: String(x.vehicleId),
-  serviceId: String(x.serviceId),
+  serviceId: x.serviceId == null ? "" : String(x.serviceId),
+  items: (x.items ?? []).map((i) => ({ ...i, productId: String(i.productId) })),
   time: String(x.time).slice(0, 5),
+});
+// Corpo de criar/editar atendimento: venda manda itens em vez de serviço.
+const orderBody = (x: Omit<ServiceOrder, "id" | "code" | "status">) => ({
+  ...x,
+  clientId: Number(x.clientId),
+  vehicleId: Number(x.vehicleId),
+  serviceId: x.serviceId ? Number(x.serviceId) : null,
+  items: x.items?.map((i) => ({ productId: Number(i.productId), quantity: i.quantity })),
 });
 const expense = (x: ApiExpense): Expense => ({ ...x, id: String(x.id) });
 
@@ -247,6 +259,16 @@ export const api = {
       }),
     ),
   deleteService: (id: string) => request<void>(`/servicos/${id}`, { method: "DELETE" }),
+  products: async () =>
+    (await request<ApiProduct[]>("/produtos")).map((x): Product => ({ ...x, id: String(x.id) })),
+  saveProduct: async (id: string | null, x: Omit<Product, "id">) => {
+    const p = await request<ApiProduct>(id ? `/produtos/${id}` : "/produtos", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(x),
+    });
+    return { ...p, id: String(p.id) } as Product;
+  },
+  deleteProduct: (id: string) => request<void>(`/produtos/${id}`, { method: "DELETE" }),
   categories: async () =>
     (
       await Promise.all(
@@ -271,12 +293,7 @@ export const api = {
       await request<ApiOrder>("/ordens-servico", {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({
-          ...body,
-          clientId: Number(body.clientId),
-          vehicleId: Number(body.vehicleId),
-          serviceId: Number(body.serviceId),
-        }),
+        body: JSON.stringify(orderBody(body)),
       }),
     );
   },
@@ -284,12 +301,7 @@ export const api = {
     order(
       await request<ApiOrder>(`/ordens-servico/${id}`, {
         method: "PUT",
-        body: JSON.stringify({
-          ...x,
-          clientId: Number(x.clientId),
-          vehicleId: Number(x.vehicleId),
-          serviceId: Number(x.serviceId),
-        }),
+        body: JSON.stringify(orderBody(x)),
       }),
     ),
   setOrderStatus: async (id: string, status: OrderStatus, payment?: OrderPayment) =>

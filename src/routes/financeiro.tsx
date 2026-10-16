@@ -67,7 +67,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 function Financeiro() {
-  const { company, orders, expenses, incomes, clientById, vehicleById, serviceById } = useStore();
+  const { company, orders, expenses, incomes, clientById, vehicleById, serviceById, orderTitle } =
+    useStore();
   const [period, setPeriod] = useState<Period>("mes");
   const [exporting, setExporting] = useState(false);
 
@@ -94,9 +95,14 @@ function Financeiro() {
 
     const byService = new Map<string, { count: number; total: number }>();
     finished.forEach((o) => {
-      const name = serviceById(o.serviceId)?.name ?? "Serviço";
-      const cur = byService.get(name) ?? { count: 0, total: 0 };
-      byService.set(name, { count: cur.count + 1, total: cur.total + o.price });
+      // Venda conta cada produto pela quantidade; atendimento conta o serviço uma vez.
+      const linhas = o.items?.length
+        ? o.items.map((i) => ({ name: i.name, count: i.quantity, total: i.quantity * i.unitPrice }))
+        : [{ name: serviceById(o.serviceId)?.name ?? "Serviço", count: 1, total: o.price }];
+      linhas.forEach(({ name, count, total }) => {
+        const cur = byService.get(name) ?? { count: 0, total: 0 };
+        byService.set(name, { count: cur.count + count, total: cur.total + total });
+      });
     });
 
     const { end, prevFrom, prevTo } = periodRange(period, from);
@@ -217,7 +223,7 @@ function Financeiro() {
                 summary: data,
                 clientById,
                 vehicleById,
-                serviceById,
+                orderTitle,
               });
             } catch (error) {
               toast.error(
@@ -425,7 +431,9 @@ function Financeiro() {
       </section>
 
       <section className="px-5 pt-6">
-        <h2 className="mb-3 text-sm font-bold">Serviços mais vendidos</h2>
+        <h2 className="mb-3 text-sm font-bold">
+          {company.usageMode === "VENDAS" ? "Produtos mais vendidos" : "Serviços mais vendidos"}
+        </h2>
         <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-card">
           {data.ranking.map(([name, v]) => (
             <div key={name}>

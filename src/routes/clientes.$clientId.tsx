@@ -37,7 +37,7 @@ function ClientDetail() {
     clientById,
     vehiclesOfClient,
     ordersOfClient,
-    serviceById,
+    orderTitle,
     vehicleById,
     addVehicle,
     updateClient,
@@ -184,7 +184,7 @@ function ClientDetail() {
                 className="block rounded-2xl border border-border bg-card p-3.5 shadow-card"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">{serviceById(o.serviceId)?.name}</p>
+                  <p className="text-sm font-semibold">{orderTitle(o)}</p>
                   <StatusBadge status={o.status} />
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">

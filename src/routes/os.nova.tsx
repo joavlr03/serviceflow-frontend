@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check, LoaderCircle, Minus, Plus } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { Field, PrimaryButton, TopBar, inputClass } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
@@ -38,8 +38,17 @@ function NovaOS() {
     addOrder,
     addClient,
     addVehicle,
+    company,
+    products,
   } = useStore();
   const services = useMemo(() => allServices.filter((s) => s.active), [allServices]);
+  // Modo vendas: a venda é uma lista de produtos com quantidade, e o valor é a soma.
+  const vendas = company.usageMode === "VENDAS";
+  const activeProducts = useMemo(() => products.filter((p) => p.active), [products]);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const chosen = activeProducts.filter((p) => (qty[p.id] ?? 0) > 0);
+  const itemsTotal = chosen.reduce((s, p) => s + p.price * (qty[p.id] ?? 0), 0);
+  const itemsText = chosen.map((p) => `${p.name} (${qty[p.id]})`).join(", ");
 
   const [step, setStep] = useState(0);
   const [clientId, setClientId] = useState<string>(clients[0]?.id ?? "");
@@ -106,9 +115,13 @@ function NovaOS() {
         finalVehicleId = (await addVehicle({ ...newVehicle, clientId: finalClientId })).id;
         setVehicleId(finalVehicleId);
       }
-      const orderPrice = parseMoney(price);
-      if (!serviceId || !date || !time || orderPrice <= 0) {
-        toast.error("Informe serviço, data, horário e um valor maior que zero");
+      const orderPrice = vendas ? itemsTotal : parseMoney(price);
+      if (vendas ? chosen.length === 0 : !serviceId) {
+        toast.error(vendas ? "Escolha ao menos um produto" : "Escolha o serviço");
+        return;
+      }
+      if (!date || !time || orderPrice <= 0) {
+        toast.error("Informe data, horário e um valor maior que zero");
         return;
       }
 
@@ -117,7 +130,15 @@ function NovaOS() {
         {
           clientId: finalClientId,
           vehicleId: finalVehicleId,
-          serviceId,
+          serviceId: vendas ? "" : serviceId,
+          items: vendas
+            ? chosen.map((p) => ({
+                productId: p.id,
+                name: p.name,
+                quantity: qty[p.id] ?? 0,
+                unitPrice: p.price,
+              }))
+            : [],
           date,
           time,
           price: orderPrice,
@@ -250,42 +271,110 @@ function NovaOS() {
           </>
         ) : null}
 
-        {step === 1 ? (
-          <>
-            <Field label="Serviço">
-              <div className="space-y-2">
-                {services.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                    Nenhum serviço ativo.{" "}
-                    <Link to="/servicos" className="font-semibold text-secondary underline">
-                      Cadastre em Serviços e preços
-                    </Link>
-                  </p>
-                ) : null}
-                {services.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setServiceId(s.id);
-                      setPrice(String(s.price));
-                    }}
-                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
-                      serviceId === s.id
-                        ? "border-secondary bg-secondary/8"
-                        : "border-border bg-card"
+        {step === 1 && vendas ? (
+          <Field label="Produtos">
+            <div className="space-y-2">
+              {activeProducts.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  Nenhum produto ativo.{" "}
+                  <Link to="/estoque" className="font-semibold text-secondary underline">
+                    Cadastre em Produtos e estoque
+                  </Link>
+                </p>
+              ) : null}
+              {activeProducts.map((p) => {
+                const n = qty[p.id] ?? 0;
+                // Funcional: toques rápidos não perdem contagem; nunca passa do estoque.
+                const add = (d: number) =>
+                  setQty((q) => ({
+                    ...q,
+                    [p.id]: Math.max(0, Math.min(p.stock, (q[p.id] ?? 0) + d)),
+                  }));
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+                      n > 0 ? "border-secondary bg-secondary/8" : "border-border bg-card"
                     }`}
                   >
-                    <span>
-                      <span className="block text-sm font-semibold">{s.name}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{p.name}</span>
                       <span className="block text-[11px] text-muted-foreground">
-                        Duração aprox. {s.durationMin} min
+                        {brl(p.price)} • {p.stock} em estoque
                       </span>
                     </span>
-                    <span className="text-sm font-bold">{brl(s.price)}</span>
-                  </button>
-                ))}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label={`Tirar um ${p.name}`}
+                        disabled={n === 0}
+                        onClick={() => add(-1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-border disabled:opacity-30"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <span className="w-5 text-center text-sm font-bold" aria-live="polite">
+                        {n}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Adicionar um ${p.name}`}
+                        disabled={n >= p.stock}
+                        onClick={() => add(1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-border disabled:opacity-30"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between px-1 pt-1 text-sm">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-bold">{brl(itemsTotal)}</span>
               </div>
-            </Field>
+            </div>
+          </Field>
+        ) : null}
+
+        {step === 1 ? (
+          <>
+            {vendas ? null : (
+              <Field label="Serviço">
+                <div className="space-y-2">
+                  {services.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      Nenhum serviço ativo.{" "}
+                      <Link to="/servicos" className="font-semibold text-secondary underline">
+                        Cadastre em Serviços e preços
+                      </Link>
+                    </p>
+                  ) : null}
+                  {services.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setServiceId(s.id);
+                        setPrice(String(s.price));
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
+                        serviceId === s.id
+                          ? "border-secondary bg-secondary/8"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      <span>
+                        <span className="block text-sm font-semibold">{s.name}</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          Duração aprox. {s.durationMin} min
+                        </span>
+                      </span>
+                      <span className="text-sm font-bold">{brl(s.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Data">
@@ -306,15 +395,17 @@ function NovaOS() {
               </Field>
             </div>
 
-            <Field label="Valor (R$)" hint="Você pode ajustar o valor sugerido do serviço.">
-              <input
-                type="text"
-                inputMode="decimal"
-                className={inputClass}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </Field>
+            {vendas ? null : (
+              <Field label="Valor (R$)" hint="Você pode ajustar o valor sugerido do serviço.">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={inputClass}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </Field>
+            )}
 
             <Field label="Observações">
               <textarea
@@ -346,10 +437,12 @@ function NovaOS() {
                         })()
                       : `${newVehicle.brand} ${newVehicle.model}`,
                 },
-                { k: "Serviço", v: services.find((s) => s.id === serviceId)?.name },
+                vendas
+                  ? { k: "Produtos", v: itemsText }
+                  : { k: "Serviço", v: services.find((s) => s.id === serviceId)?.name },
                 { k: "Data", v: date.split("-").reverse().join("/") },
                 { k: "Horário", v: time },
-                { k: "Valor", v: brl(Number(price) || 0) },
+                { k: "Valor", v: brl(vendas ? itemsTotal : parseMoney(price)) },
                 { k: "Status", v: "Agendado" },
               ].map((row) => (
                 <div

@@ -9,6 +9,7 @@ import {
   Settings,
   TrendingUp,
   Users,
+  Package,
 } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { StatCard, StatusBadge } from "@/components/app/ui-bits";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { company, orders, clientById, vehicleById, serviceById } = useStore();
+  const { company, orders, clientById, vehicleById, orderTitle } = useStore();
   const today = todayISO();
   const todays = orders
     .filter((o) => o.date === today)
@@ -66,7 +67,7 @@ function Dashboard() {
               <div className="min-w-0">
                 <p className="truncate text-base font-bold">{clientById(next.clientId)?.name}</p>
                 <p className="truncate text-xs opacity-75">
-                  {serviceById(next.serviceId)?.name} • {vehicleById(next.vehicleId)?.brand}{" "}
+                  {orderTitle(next)} • {vehicleById(next.vehicleId)?.brand}{" "}
                   {vehicleById(next.vehicleId)?.model}
                 </p>
               </div>
@@ -99,7 +100,10 @@ function Dashboard() {
         <div className="grid grid-cols-4 gap-2">
           {[
             { to: "/os/nova", label: "Novo atendimento", icon: Plus },
-            { to: "/agenda", label: "Agenda", icon: CalendarDays },
+            // Modo vendas troca a agenda pelo atalho de estoque.
+            company.usageMode === "VENDAS"
+              ? { to: "/estoque", label: "Estoque", icon: Package }
+              : { to: "/agenda", label: "Agenda", icon: CalendarDays },
             { to: "/clientes", label: "Clientes", icon: Users },
             { to: "/despesas", label: "Despesas", icon: Receipt },
           ].map((s) => (
@@ -142,7 +146,7 @@ function Dashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{client?.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {vehicle?.brand} {vehicle?.model} • {serviceById(o.serviceId)?.name}
+                    {vehicle?.brand} {vehicle?.model} • {orderTitle(o)}
                   </p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <StatusBadge status={o.status} />

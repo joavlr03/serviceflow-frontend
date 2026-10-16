@@ -18,6 +18,7 @@ import type {
   OrderStatus,
   ServiceOrder,
   ServiceType,
+  Product,
   Category,
   Vehicle,
 } from "./types";
@@ -31,6 +32,7 @@ interface StoreValue {
   expenses: Expense[];
   incomes: Income[];
   categories: Category[];
+  products: Product[];
   loading: boolean;
   addClient: (c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
   updateClient: (id: string, c: Omit<Client, "id" | "createdAt">) => Promise<Client>;
@@ -45,6 +47,10 @@ interface StoreValue {
   deleteService: (id: string) => Promise<void>;
   saveCategory: (id: string | null, c: Omit<Category, "id">) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  saveProduct: (id: string | null, p: Omit<Product, "id">) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  /** Nome do serviço, ou os itens de uma venda: "Cera (2), Pano (1)". */
+  orderTitle: (o: ServiceOrder) => string;
   clientById: (id: string) => Client | undefined;
   vehicleById: (id: string) => Vehicle | undefined;
   serviceById: (id: string) => ServiceType | undefined;
@@ -63,12 +69,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [expenses, setExpenses] = useState<Expense[]>([]),
     [incomes, setIncomes] = useState<Income[]>([]),
     [categories, setCategories] = useState<Category[]>([]),
+    [products, setProducts] = useState<Product[]>([]),
     [loading, setLoading] = useState(false);
   const reload = useCallback(async () => {
     if (!(await ensureSession())) return;
     setLoading(true);
     try {
-      const [co, cs, ss, os, es, cats, ins] = await Promise.all([
+      const [co, cs, ss, os, es, cats, ins, ps] = await Promise.all([
         api.company(),
         api.clients(),
         api.services(),
@@ -76,6 +83,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         api.expenses(),
         api.categories(),
         api.incomes(),
+        api.products(),
       ]);
       const vs = (await Promise.all(cs.map((c) => api.clientVehicles(c.id)))).flat();
       setCompany(co);
@@ -85,6 +93,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setOrders(os);
       setExpenses(es);
       setIncomes(ins);
+      setProducts(ps.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
       setCategories(cats.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
       setVehicles(vs);
     } finally {
@@ -121,6 +130,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async (id: string, status: OrderStatus, payment?: OrderPayment) => {
       const o = await api.setOrderStatus(id, status, payment);
       setOrders((p) => p.map((x) => (x.id === id ? o : x)));
+      // Finalizar ou reabrir uma venda mexe no estoque.
+      if (o.items?.length) setProducts(await api.products());
     },
     [],
   );
@@ -174,6 +185,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     [categories],
   );
+  const saveProduct = useCallback(async (id: string | null, x: Omit<Product, "id">) => {
+    const s = await api.saveProduct(id, x);
+    setProducts((p) =>
+      [...p.filter((y) => y.id !== s.id), s].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    );
+  }, []);
+  const deleteProduct = useCallback(async (id: string) => {
+    await api.deleteProduct(id);
+    setProducts((p) => p.filter((s) => s.id !== id));
+  }, []);
   const deleteCategory = useCallback(async (id: string) => {
     await api.deleteCategory(id);
     setCategories((p) => p.filter((c) => c.id !== id));
@@ -188,6 +209,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       expenses,
       incomes,
       categories,
+      products,
       loading,
       addClient,
       updateClient,
@@ -202,9 +224,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteService,
       saveCategory,
       deleteCategory,
+      saveProduct,
+      deleteProduct,
       clientById: (id) => clients.find((x) => x.id === id),
       vehicleById: (id) => vehicles.find((x) => x.id === id),
       serviceById: (id) => services.find((x) => x.id === id),
+      orderTitle: (o) =>
+        o.items?.length
+          ? o.items.map((i) => `${i.name} (${i.quantity})`).join(", ")
+          : (services.find((x) => x.id === o.serviceId)?.name ?? ""),
       vehiclesOfClient: (id) => vehicles.filter((x) => x.clientId === id),
       ordersOfClient: (id) =>
         orders
@@ -221,6 +249,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       expenses,
       incomes,
       categories,
+      products,
       loading,
       addClient,
       updateClient,
@@ -235,6 +264,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteService,
       saveCategory,
       deleteCategory,
+      saveProduct,
+      deleteProduct,
       reload,
     ],
   );

@@ -27,12 +27,29 @@ export interface ServiceType {
   active: boolean;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  active: boolean;
+}
+
+// Item de uma venda; o preço é o do produto na hora da venda.
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface ServiceOrder {
   id: string;
   code: string;
   clientId: string;
   vehicleId: string;
-  serviceId: string;
+  serviceId: string; // "" numa venda (modo VENDAS), que tem itens
+  items?: OrderItem[];
   description?: string;
   date: string; // yyyy-MM-dd
   time: string; // HH:mm
@@ -75,4 +92,5 @@ export interface Company {
   email: string;
   plan: string;
   themeColor?: string | null; // #RRGGBB; null = cor padrão
+  usageMode?: "SERVICOS" | "VENDAS";
 }

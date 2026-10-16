@@ -1,7 +1,7 @@
 import writeExcelFile from "write-excel-file/browser";
 import type { Cell, Row } from "write-excel-file/browser";
 import { paymentText, statusMap } from "@/components/app/ui-bits";
-import type { Client, Company, Expense, Income, ServiceOrder, ServiceType, Vehicle } from "./types";
+import type { Client, Company, Expense, Income, ServiceOrder, Vehicle } from "./types";
 
 // Nomes dos campos da planilha universal. A estrutura é a mesma para toda empresa; só os nomes mudam.
 // shortcut: um único mapa para todos os segmentos; vira mapa por segmento/empresa quando aparecer o primeiro caso diferente.
@@ -34,7 +34,7 @@ export interface ExportInput {
   };
   clientById: (id: string) => Client | undefined;
   vehicleById: (id: string) => Vehicle | undefined;
-  serviceById: (id: string) => ServiceType | undefined;
+  orderTitle: (o: ServiceOrder) => string;
 }
 
 const MOEDA = '"R$" #,##0.00';
@@ -91,7 +91,7 @@ export function buildSheets(x: ExportInput) {
         o.time,
         x.clientById(o.clientId)?.name ?? "",
         ...(usaVeiculo ? [v ? `${v.brand} ${v.model} ${v.plate}`.trim() : ""] : []),
-        x.serviceById(o.serviceId)?.name ?? "",
+        x.orderTitle(o),
         statusMap[o.status].label,
         paymentText(o),
         money(o.price),
