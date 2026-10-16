@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import type { OrderStatus } from "@/lib/types";
+import type { OrderStatus, PaymentMethod, ServiceOrder } from "@/lib/types";
 
 export function TopBar({
   title,
@@ -34,11 +34,26 @@ export function TopBar({
   );
 }
 
-const statusMap: Record<OrderStatus, { label: string; className: string }> = {
+export const statusMap: Record<OrderStatus, { label: string; className: string }> = {
   AGENDADO: { label: "Agendado", className: "bg-warning/20 text-warning-foreground" },
   FINALIZADO: { label: "Finalizado", className: "bg-success/15 text-success" },
   CANCELADO: { label: "Cancelado", className: "bg-secondary/12 text-secondary" },
 };
+
+export const paymentLabel: Record<PaymentMethod, string> = {
+  PIX: "Pix",
+  DINHEIRO: "Dinheiro",
+  CREDITO: "Crédito",
+  DEBITO: "Débito",
+};
+
+// Pagamento só faz sentido para atendimento finalizado.
+export const paymentText = (o: ServiceOrder) =>
+  o.status !== "FINALIZADO"
+    ? ""
+    : o.paid
+      ? `Pago${o.paymentMethod ? ` · ${paymentLabel[o.paymentMethod]}` : ""}`
+      : "A receber";
 
 export function StatusBadge({ status }: { status: OrderStatus }) {
   const s = statusMap[status];

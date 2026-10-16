@@ -94,32 +94,42 @@
   --destructive-foreground: oklch(0.99 0.005 60);
   --border: oklch(0.9 0.012 60);
   --input: oklch(0.9 0.012 60);
-  --ring: oklch(0.575 0.229 32);
+  --ring: var(--secondary);
 
   --success: oklch(0.62 0.15 155);
   --success-foreground: oklch(0.99 0.005 60);
   --warning: oklch(0.78 0.15 75);
   --warning-foreground: oklch(0.24 0.05 40);
 
-  --gradient-brand: linear-gradient(135deg, oklch(0.19 0.045 40), oklch(0.32 0.11 34));
-  --gradient-accent: linear-gradient(135deg, oklch(0.575 0.229 32), oklch(0.68 0.19 45));
+  /* Derivados de --secondary, que muda conforme a cor escolhida pela empresa.
+     Topo: a mesma cor bem escurecida (no vermelho padrão fica igual ao marrom original). */
+  --gradient-brand: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--secondary), black 67%),
+    color-mix(in oklch, var(--secondary), black 45%)
+  );
+  --gradient-accent: linear-gradient(
+    135deg,
+    var(--secondary),
+    color-mix(in oklch, var(--secondary), white 22%)
+  );
   --shadow-card:
     0 1px 2px oklch(0.19 0.045 40 / 0.06), 0 8px 24px -12px oklch(0.19 0.045 40 / 0.18);
-  --shadow-float: 0 12px 32px -8px oklch(0.575 0.229 32 / 0.45);
+  --shadow-float: 0 12px 32px -8px color-mix(in oklch, var(--secondary) 45%, transparent);
 
-  --chart-1: oklch(0.575 0.229 32);
+  --chart-1: var(--secondary);
   --chart-2: oklch(0.62 0.15 155);
   --chart-3: oklch(0.78 0.15 75);
   --chart-4: oklch(0.32 0.11 34);
   --chart-5: oklch(0.53 0.028 45);
   --sidebar: oklch(0.19 0.045 40);
   --sidebar-foreground: oklch(0.98 0.006 60);
-  --sidebar-primary: oklch(0.575 0.229 32);
+  --sidebar-primary: var(--secondary);
   --sidebar-primary-foreground: oklch(0.99 0.005 60);
   --sidebar-accent: oklch(0.26 0.06 38);
   --sidebar-accent-foreground: oklch(0.98 0.006 60);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.575 0.229 32);
+  --sidebar-ring: var(--secondary);
 }
 
 .dark {

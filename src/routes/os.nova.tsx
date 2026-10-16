@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
@@ -11,13 +11,13 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/os/nova")({
   head: () => ({
     meta: [
-      { title: "Nova ordem de serviço | ServiceFlow" },
+      { title: "Novo atendimento | ServiceFlow" },
       {
         name: "description",
         content:
-          "Cadastre cliente, veículo, serviço, data, horário e valor em uma única ordem de serviço.",
+          "Cadastre cliente, veículo, serviço, data, horário e valor em um único atendimento.",
       },
-      { property: "og:title", content: "Nova ordem de serviço | ServiceFlow" },
+      { property: "og:title", content: "Novo atendimento | ServiceFlow" },
       {
         property: "og:description",
         content: "Um cadastro alimenta agenda, financeiro e histórico.",
@@ -31,7 +31,15 @@ const steps = ["Cliente", "Serviço", "Resumo"];
 
 function NovaOS() {
   const navigate = useNavigate();
-  const { clients, services, vehiclesOfClient, addOrder, addClient, addVehicle } = useStore();
+  const {
+    clients,
+    services: allServices,
+    vehiclesOfClient,
+    addOrder,
+    addClient,
+    addVehicle,
+  } = useStore();
+  const services = useMemo(() => allServices.filter((s) => s.active), [allServices]);
 
   const [step, setStep] = useState(0);
   const [clientId, setClientId] = useState<string>(clients[0]?.id ?? "");
@@ -124,9 +132,9 @@ function NovaOS() {
         search: { criada: true },
         replace: true,
       });
-      toast.success(`${created.code} registrada com sucesso`);
+      toast.success(`${created.code} registrado com sucesso`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a OS");
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o atendimento");
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -135,7 +143,7 @@ function NovaOS() {
 
   return (
     <PhoneShell fab={false} bottomNav={false}>
-      <TopBar title="Nova ordem de serviço" subtitle={steps[step] ?? ""} backTo="/dashboard" />
+      <TopBar title="Novo atendimento" subtitle={steps[step] ?? ""} backTo="/dashboard" />
 
       <div className="flex gap-2 px-5 pt-4">
         {steps.map((s, i) => (
@@ -246,6 +254,14 @@ function NovaOS() {
           <>
             <Field label="Serviço">
               <div className="space-y-2">
+                {services.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                    Nenhum serviço ativo.{" "}
+                    <Link to="/servicos" className="font-semibold text-secondary underline">
+                      Cadastre em Serviços e preços
+                    </Link>
+                  </p>
+                ) : null}
                 {services.map((s) => (
                   <button
                     key={s.id}
@@ -346,8 +362,8 @@ function NovaOS() {
               ))}
             </div>
             <p className="rounded-2xl border border-secondary/20 bg-secondary/8 p-3.5 text-xs text-muted-foreground">
-              Ao salvar, a OS entra na agenda, no faturamento previsto e no histórico do cliente — e
-              a mensagem de WhatsApp é gerada automaticamente.
+              Ao salvar, o atendimento entra na agenda, no faturamento previsto e no histórico do
+              cliente — e a mensagem de WhatsApp é gerada automaticamente.
             </p>
           </div>
         ) : null}
@@ -372,7 +388,7 @@ function NovaOS() {
               </>
             ) : (
               <>
-                <Check className="h-4 w-4" /> Salvar OS
+                <Check className="h-4 w-4" /> Salvar atendimento
               </>
             )}
           </PrimaryButton>

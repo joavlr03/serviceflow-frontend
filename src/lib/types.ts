@@ -1,4 +1,5 @@
 export type OrderStatus = "AGENDADO" | "FINALIZADO" | "CANCELADO";
+export type PaymentMethod = "PIX" | "DINHEIRO" | "CREDITO" | "DEBITO";
 
 export interface Vehicle {
   id: string;
@@ -23,6 +24,7 @@ export interface ServiceType {
   name: string;
   price: number;
   durationMin: number;
+  active: boolean;
 }
 
 export interface ServiceOrder {
@@ -37,7 +39,11 @@ export interface ServiceOrder {
   price: number;
   notes?: string;
   status: OrderStatus;
+  paymentMethod?: PaymentMethod | null;
+  paid?: boolean;
 }
+
+export type OrderPayment = Pick<ServiceOrder, "paymentMethod" | "paid">;
 
 export type ExpenseCategory =
   | "Produtos"
@@ -65,4 +71,5 @@ export interface Company {
   ownerName: string;
   email: string;
   plan: string;
+  themeColor?: string | null; // #RRGGBB; null = cor padrão
 }

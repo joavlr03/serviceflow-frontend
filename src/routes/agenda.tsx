@@ -14,7 +14,7 @@ export const Route = createFileRoute("/agenda")({
       {
         name: "description",
         content:
-          "Visualize os atendimentos por dia e horário, finalize, edite ou cancele ordens de serviço.",
+          "Visualize os atendimentos por dia e horário, finalize, edite ou cancele atendimentos.",
       },
       { property: "og:title", content: "Agenda de atendimentos | ServiceFlow" },
       {
@@ -139,7 +139,7 @@ function Agenda() {
         {list.length === 0 ? (
           <EmptyState
             title="Nenhum atendimento neste dia"
-            description="Toque no botão + para criar uma nova ordem de serviço."
+            description="Toque no botão + para criar um novo atendimento."
           />
         ) : null}
 

@@ -17,11 +17,11 @@ export const company: Company = {
 };
 
 export const services: ServiceType[] = [
-  { id: "s1", name: "Lavagem Simples", price: 45, durationMin: 40 },
-  { id: "s2", name: "Lavagem Completa", price: 80, durationMin: 70 },
-  { id: "s3", name: "Polimento", price: 220, durationMin: 180 },
-  { id: "s4", name: "Higienização Interna", price: 160, durationMin: 120 },
-  { id: "s5", name: "Cera Premium", price: 120, durationMin: 90 },
+  { id: "s1", name: "Lavagem Simples", price: 45, durationMin: 40, active: true },
+  { id: "s2", name: "Lavagem Completa", price: 80, durationMin: 70, active: true },
+  { id: "s3", name: "Polimento", price: 220, durationMin: 180, active: true },
+  { id: "s4", name: "Higienização Interna", price: 160, durationMin: 120, active: true },
+  { id: "s5", name: "Cera Premium", price: 120, durationMin: 90, active: true },
 ];
 
 export const clients: Client[] = [
