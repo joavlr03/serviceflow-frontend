@@ -4,6 +4,7 @@ import { Check, LoaderCircle, Minus, Plus } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { Field, PrimaryButton, TopBar, inputClass } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, todayISO } from "@/lib/format";
 import { parseMoney } from "@/lib/format";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ function NovaOS() {
     company,
     products,
   } = useStore();
+  const t = useTermos();
   const services = useMemo(() => allServices.filter((s) => s.active), [allServices]);
   // Modo vendas: a venda é uma lista de produtos com quantidade, e o valor é a soma.
   const vendas = company.usageMode === "VENDAS";
@@ -48,6 +50,7 @@ function NovaOS() {
   const [qty, setQty] = useState<Record<string, number>>({});
   const chosen = activeProducts.filter((p) => (qty[p.id] ?? 0) > 0);
   const itemsTotal = chosen.reduce((s, p) => s + p.price * (qty[p.id] ?? 0), 0);
+  const stepNames = vendas ? ["Cliente", "Produtos", "Resumo"] : steps;
   const itemsText = chosen.map((p) => `${p.name} (${qty[p.id]})`).join(", ");
 
   const [step, setStep] = useState(0);
@@ -153,9 +156,11 @@ function NovaOS() {
         search: { criada: true },
         replace: true,
       });
-      toast.success(`${created.code} registrado com sucesso`);
+      toast.success(`${t.codigo(created.code)} registrad${t.o} com sucesso`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o atendimento");
+      toast.error(
+        error instanceof Error ? error.message : `Não foi possível salvar ${t.o} ${t.atendimento}`,
+      );
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -164,10 +169,10 @@ function NovaOS() {
 
   return (
     <PhoneShell fab={false} bottomNav={false}>
-      <TopBar title="Novo atendimento" subtitle={steps[step] ?? ""} backTo="/dashboard" />
+      <TopBar title={t.novo} subtitle={stepNames[step] ?? ""} backTo="/dashboard" />
 
       <div className="flex gap-2 px-5 pt-4">
-        {steps.map((s, i) => (
+        {stepNames.map((s, i) => (
           <div
             key={s}
             className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-secondary" : "bg-muted"}`}
@@ -413,7 +418,7 @@ function NovaOS() {
                 className={inputClass}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Detalhes do atendimento"
+                placeholder={`Detalhes d${t.o} ${t.atendimento}`}
               />
             </Field>
           </>
@@ -455,8 +460,8 @@ function NovaOS() {
               ))}
             </div>
             <p className="rounded-2xl border border-secondary/20 bg-secondary/8 p-3.5 text-xs text-muted-foreground">
-              Ao salvar, o atendimento entra na agenda, no faturamento previsto e no histórico do
-              cliente — e a mensagem de WhatsApp é gerada automaticamente.
+              Ao salvar, {t.o} {t.atendimento} entra na agenda, no faturamento previsto e no
+              histórico do cliente — e a mensagem de WhatsApp é gerada automaticamente.
             </p>
           </div>
         ) : null}
@@ -481,7 +486,7 @@ function NovaOS() {
               </>
             ) : (
               <>
-                <Check className="h-4 w-4" /> Salvar atendimento
+                <Check className="h-4 w-4" /> Salvar {t.atendimento}
               </>
             )}
           </PrimaryButton>

@@ -14,6 +14,7 @@ import {
 } from "@/components/app/ui-bits";
 import { PaymentDrawer } from "@/components/app/PaymentDrawer";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/os/$osId")({
@@ -40,6 +41,7 @@ function OsDetail() {
   const { osId } = useParams({ from: "/os/$osId" });
   const { criada } = Route.useSearch();
   const { orders, clientById, vehicleById, orderTitle, setOrderStatus } = useStore();
+  const t = useTermos();
   const order = orders.find((o) => o.id === osId);
 
   const client = order ? clientById(order.clientId) : undefined;
@@ -48,8 +50,21 @@ function OsDetail() {
 
   const defaultMessage = useMemo(() => {
     if (!order) return "";
+    const nome = client?.name?.split(" ")[0] ?? "cliente";
+    // Venda: modelo de compra, sem data, horário nem veículo (spec 006).
+    if (order.items?.length)
+      return [
+        `Olá, ${nome}!`,
+        "",
+        "Sua compra foi confirmada.",
+        "",
+        ...order.items.map((i) => `${i.name} (${i.quantity})`),
+        brl(order.price),
+        "",
+        "Obrigado pela preferência!",
+      ].join("\n");
     return [
-      `Olá, ${client?.name?.split(" ")[0] ?? "cliente"}!`,
+      `Olá, ${nome}!`,
       "",
       "Seu atendimento foi confirmado.",
       "",
@@ -63,16 +78,21 @@ function OsDetail() {
     ].join("\n");
   }, [order, client, vehicle, title]);
 
-  const [message, setMessage] = useState(defaultMessage);
+  // Segue o texto padrão até a pessoa editar; o padrão só fica pronto quando os dados carregam.
+  const [edited, setMessage] = useState<string | null>(null);
+  const message = edited ?? defaultMessage;
   const [editing, setEditing] = useState(false);
   const [paying, setPaying] = useState(false);
 
   if (!order) {
     return (
       <PhoneShell fab={false} bottomNav={false}>
-        <TopBar title="Atendimento" backTo="/agenda" />
+        <TopBar title={t.Atendimento} backTo="/agenda" />
         <div className="p-5">
-          <EmptyState title="Atendimento não encontrado" description="Volte para a agenda." />
+          <EmptyState
+            title={`${t.Atendimento} não encontrad${t.o}`}
+            description="Volte para a agenda."
+          />
         </div>
       </PhoneShell>
     );
@@ -92,7 +112,7 @@ function OsDetail() {
 
   return (
     <PhoneShell fab={false} bottomNav={false}>
-      <TopBar title={order.code} subtitle="Atendimento" backTo="/agenda" />
+      <TopBar title={t.codigo(order.code)} subtitle={t.Atendimento} backTo="/agenda" />
 
       {criada ? (
         <div
@@ -101,9 +121,11 @@ function OsDetail() {
         >
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <p className="text-sm font-bold">Atendimento registrado com sucesso</p>
+            <p className="text-sm font-bold">
+              {t.Atendimento} registrad{t.o} com sucesso
+            </p>
             <p className="mt-0.5 text-xs text-foreground">
-              {order.code} já foi adicionado à agenda e ao faturamento previsto.
+              {t.codigo(order.code)} já foi adicionad{t.o} à agenda e ao faturamento previsto.
             </p>
           </div>
         </div>
@@ -192,10 +214,10 @@ function OsDetail() {
             <GhostButton
               onClick={async () => {
                 await setOrderStatus(order.id, "CANCELADO");
-                toast("Atendimento cancelado — removido do faturamento previsto");
+                toast(`${t.Atendimento} cancelad${t.o} — removid${t.o} do faturamento previsto`);
               }}
             >
-              <Ban className="h-4 w-4" /> Cancelar atendimento
+              <Ban className="h-4 w-4" /> Cancelar {t.atendimento}
             </GhostButton>
           </>
         ) : (

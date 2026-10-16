@@ -13,6 +13,7 @@ import {
   inputClass,
 } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -42,6 +43,7 @@ function ClientDetail() {
     addVehicle,
     updateClient,
   } = useStore();
+  const t = useTermos();
   const client = clientById(clientId);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -121,14 +123,14 @@ function ClientDetail() {
               to="/os/nova"
               className="flex items-center justify-center gap-2 rounded-xl bg-brand-accent py-2.5 text-xs font-semibold text-secondary-foreground"
             >
-              <Plus className="h-4 w-4" /> Novo atendimento
+              <Plus className="h-4 w-4" /> {t.novo}
             </Link>
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-3 gap-2 px-5 pt-4">
-        <StatCard label="Atendimentos" value={String(finished.length)} />
+        <StatCard label={t.Atendimentos} value={String(finished.length)} />
         <StatCard label="Total gasto" value={brl(totalSpent)} tone="accent" />
         <StatCard label="Última visita" value={finished[0] ? formatDate(finished[0].date) : "—"} />
       </section>
@@ -197,7 +199,7 @@ function ClientDetail() {
           {history.length === 0 ? (
             <EmptyState
               title="Sem histórico"
-              description="Este cliente ainda não possui atendimentos."
+              description={`Este cliente ainda não possui ${t.atendimentos}.`}
             />
           ) : null}
         </div>

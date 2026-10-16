@@ -1,6 +1,7 @@
 import writeExcelFile from "write-excel-file/browser";
 import type { Cell, Row } from "write-excel-file/browser";
 import { paymentText, statusMap } from "@/components/app/ui-bits";
+import { termosDe } from "./termos";
 import type { Client, Company, Expense, Income, ServiceOrder, Vehicle } from "./types";
 
 // Nomes dos campos da planilha universal. A estrutura é a mesma para toda empresa; só os nomes mudam.
@@ -47,6 +48,11 @@ const date = (iso: string): Cell => ({ value: new Date(`${iso}T00:00:00Z`), form
 const br = (iso: string) => iso.split("-").reverse().join("/");
 
 export function buildSheets(x: ExportInput) {
+  const vendas = x.company.usageMode === "VENDAS";
+  const t = vendas
+    ? { ...termos, atendimento: "Venda", atendimentos: "Vendas", servico: "Produtos" }
+    : termos;
+  const codigo = termosDe(x.company).codigo;
   // Coluna de veículo só entra se a empresa usa veículo (hoje: se algum atendimento do período tem um).
   const usaVeiculo = x.orders.some((o) => o.vehicleId);
   const orders = [...x.orders].sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
@@ -60,12 +66,12 @@ export function buildSheets(x: ExportInput) {
     [],
     [bold("Indicador"), bold("Valor")],
     ["Receita realizada", money(s.realized)],
-    [`  de ${termos.atendimentos.toLowerCase()}`, money(s.realized - s.inc)],
-    [`  de ${termos.entradas.toLowerCase()}`, money(s.inc)],
+    [`  de ${t.atendimentos.toLowerCase()}`, money(s.realized - s.inc)],
+    [`  de ${t.entradas.toLowerCase()}`, money(s.inc)],
     ["Receita prevista", money(s.forecast)],
-    [termos.despesas, money(s.exp)],
+    [t.despesas, money(s.exp)],
     [bold("Lucro"), moneyBold(s.profit)],
-    [`${termos.atendimentos} finalizados`, s.finished],
+    [`${t.atendimentos} finalizados`, s.finished],
     ["Cancelamentos", s.canceled],
     ["Ticket médio", money(s.ticket)],
   ];
@@ -74,9 +80,9 @@ export function buildSheets(x: ExportInput) {
     "Código",
     "Data",
     "Horário",
-    termos.cliente,
-    ...(usaVeiculo ? [termos.veiculo] : []),
-    termos.servico,
+    t.cliente,
+    ...(usaVeiculo ? [t.veiculo] : []),
+    t.servico,
     "Status",
     "Pagamento",
     "Valor",
@@ -86,7 +92,7 @@ export function buildSheets(x: ExportInput) {
     ...orders.map((o): Row => {
       const v = x.vehicleById(o.vehicleId);
       return [
-        o.code,
+        codigo(o.code),
         date(o.date),
         o.time,
         x.clientById(o.clientId)?.name ?? "",
@@ -125,12 +131,12 @@ export function buildSheets(x: ExportInput) {
     { data: resumo, sheet: "Resumo", columns: w(28, 18) },
     {
       data: atendimentos,
-      sheet: termos.atendimentos,
+      sheet: t.atendimentos,
       columns: w(10, 12, 9, 24, ...(usaVeiculo ? [24] : []), 22, 12, 16, 14),
       stickyRowsCount: 1,
     },
-    { data: entradas, sheet: termos.entradas, columns: w(12, 28, 18, 28, 14), stickyRowsCount: 1 },
-    { data: despesas, sheet: termos.despesas, columns: w(12, 28, 18, 28, 14), stickyRowsCount: 1 },
+    { data: entradas, sheet: t.entradas, columns: w(12, 28, 18, 28, 14), stickyRowsCount: 1 },
+    { data: despesas, sheet: t.despesas, columns: w(12, 28, 18, 28, 14), stickyRowsCount: 1 },
   ];
 }
 

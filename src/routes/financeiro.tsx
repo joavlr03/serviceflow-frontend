@@ -15,6 +15,7 @@ import { PhoneShell } from "@/components/app/PhoneShell";
 import { StatCard, TopBar } from "@/components/app/ui-bits";
 import { PaymentDrawer } from "@/components/app/PaymentDrawer";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, formatDate, parseISO, startOfMonthISO, startOfWeekISO, todayISO } from "@/lib/format";
 import { exportarPeriodo } from "@/lib/export-excel";
 import type { ServiceOrder } from "@/lib/types";
@@ -69,6 +70,7 @@ const chartConfig = {
 function Financeiro() {
   const { company, orders, expenses, incomes, clientById, vehicleById, serviceById, orderTitle } =
     useStore();
+  const t = useTermos();
   const [period, setPeriod] = useState<Period>("mes");
   const [exporting, setExporting] = useState(false);
 
@@ -408,7 +410,7 @@ function Financeiro() {
                   {clientById(o.clientId)?.name ?? "Cliente"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {o.code} • {formatDate(o.date)} • {brl(o.price)}
+                  {t.codigo(o.code)} • {formatDate(o.date)} • {brl(o.price)}
                 </p>
               </Link>
               <button
@@ -420,13 +422,11 @@ function Financeiro() {
             </div>
           ))}
           {pending.length === 0 ? (
-            <p className="p-4 text-center text-xs text-muted-foreground">
-              Nenhum atendimento a receber.
-            </p>
+            <p className="p-4 text-center text-xs text-muted-foreground">{t.nenhum} a receber.</p>
           ) : null}
         </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          Atendimentos finalizados e ainda não pagos, de qualquer período.
+          {t.Atendimentos} finalizad{t.o}s e ainda não pag{t.o}s, de qualquer período.
         </p>
       </section>
 

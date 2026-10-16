@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/drawer";
 import { GhostButton, PrimaryButton, paymentLabel } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl } from "@/lib/format";
 import type { PaymentMethod, ServiceOrder } from "@/lib/types";
 
@@ -21,6 +22,7 @@ export function PaymentDrawer({
   onClose: () => void;
 }) {
   const { setOrderStatus } = useStore();
+  const t = useTermos();
   // Guarda o atendimento aberto para o conteúdo não mudar durante a animação de fechar.
   const [shown, setShown] = useState<ServiceOrder | null>(null);
   const [method, setMethod] = useState<PaymentMethod | null>(null);
@@ -42,8 +44,8 @@ export function PaymentDrawer({
         !finalizing
           ? "Pagamento registrado"
           : paid
-            ? "Atendimento finalizado e pago"
-            : "Atendimento finalizado — fica a receber",
+            ? `${t.Atendimento} finalizad${t.o} e pag${t.o}`
+            : `${t.Atendimento} finalizad${t.o} — fica a receber`,
       );
       onClose();
     } catch (error) {
@@ -57,9 +59,11 @@ export function PaymentDrawer({
     <Drawer open={!!order} onOpenChange={(open) => (open ? undefined : onClose())}>
       <DrawerContent className="mx-auto max-w-[430px]">
         <DrawerHeader>
-          <DrawerTitle>{finalizing ? "Finalizar atendimento" : "Registrar pagamento"}</DrawerTitle>
+          <DrawerTitle>
+            {finalizing ? `Finalizar ${t.atendimento}` : "Registrar pagamento"}
+          </DrawerTitle>
           <DrawerDescription>
-            {shown ? `${shown.code} · ${brl(shown.price)}` : ""}
+            {shown ? `${t.codigo(shown.code)} · ${brl(shown.price)}` : ""}
           </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-8">

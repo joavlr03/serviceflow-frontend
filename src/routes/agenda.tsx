@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { EmptyState, StatusBadge, TopBar } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, formatLongDate, parseISO, todayISO } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types";
 
@@ -45,6 +46,7 @@ function dayList() {
 
 function Agenda() {
   const { orders, clientById, vehicleById, orderTitle } = useStore();
+  const t = useTermos();
   const [day, setDay] = useState(todayISO());
   const [status, setStatus] = useState<OrderStatus | "TODOS">("TODOS");
   const days = useMemo(dayList, []);
@@ -73,7 +75,7 @@ function Agenda() {
 
   return (
     <PhoneShell>
-      <TopBar title="Agenda" subtitle="Atendimentos por dia e horário" />
+      <TopBar title="Agenda" subtitle={`${t.Atendimentos} por dia e horário`} />
 
       <div className="flex gap-2 px-5 pt-4">
         <button
@@ -178,8 +180,8 @@ function Agenda() {
 
         {list.length === 0 ? (
           <EmptyState
-            title="Nenhum atendimento neste dia"
-            description="Toque no botão + para criar um novo atendimento."
+            title={`${t.nenhum} neste dia`}
+            description={`Toque no botão + para criar ${t.o === "a" ? "uma nova" : "um novo"} ${t.atendimento}.`}
           />
         ) : null}
 

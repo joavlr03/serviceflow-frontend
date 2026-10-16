@@ -11,6 +11,7 @@ import {
   inputClass,
 } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/clientes/")({
 
 function Clientes() {
   const { clients, vehiclesOfClient, ordersOfClient, addClient } = useStore();
+  const t = useTermos();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", whatsapp: "", notes: "" });
@@ -98,7 +100,9 @@ function Clientes() {
                     <Car className="h-3 w-3" /> {cars.length} veículo(s)
                   </span>
                   <span>•</span>
-                  <span>{history.length} atendimentos</span>
+                  <span>
+                    {history.length} {t.atendimentos}
+                  </span>
                 </p>
               </div>
               {last ? (
