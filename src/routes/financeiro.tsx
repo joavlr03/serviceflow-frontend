@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Receipt } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Download, Receipt } from "lucide-react";
+import { toast } from "sonner";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { StatCard, TopBar } from "@/components/app/ui-bits";
+import { PaymentDrawer } from "@/components/app/PaymentDrawer";
 import { useStore } from "@/lib/store";
-import { brl, startOfMonthISO, startOfWeekISO, todayISO } from "@/lib/format";
+import { brl, formatDate, startOfMonthISO, startOfWeekISO, todayISO } from "@/lib/format";
+import { exportarPeriodo } from "@/lib/export-excel";
+import type { ServiceOrder } from "@/lib/types";
 
 export const Route = createFileRoute("/financeiro")({
   head: () => ({
@@ -27,8 +31,9 @@ export const Route = createFileRoute("/financeiro")({
 type Period = "hoje" | "semana" | "mes";
 
 function Financeiro() {
-  const { orders, expenses, serviceById } = useStore();
+  const { company, orders, expenses, clientById, vehicleById, serviceById } = useStore();
   const [period, setPeriod] = useState<Period>("mes");
+  const [exporting, setExporting] = useState(false);
 
   const from =
     period === "hoje" ? todayISO() : period === "semana" ? startOfWeekISO() : startOfMonthISO();
@@ -42,7 +47,8 @@ function Financeiro() {
     const canceled = os.filter((o) => o.status === "CANCELADO");
     const realized = finished.reduce((s, o) => s + o.price, 0);
     const forecast = realized + scheduled.reduce((s, o) => s + o.price, 0);
-    const exp = expenses.filter((e) => inRange(e.date)).reduce((s, e) => s + e.amount, 0);
+    const periodExpenses = expenses.filter((e) => inRange(e.date));
+    const exp = periodExpenses.reduce((s, e) => s + e.amount, 0);
 
     const byService = new Map<string, { count: number; total: number }>();
     finished.forEach((o) => {
@@ -52,6 +58,8 @@ function Financeiro() {
     });
 
     return {
+      os,
+      periodExpenses,
       realized,
       forecast,
       exp,
@@ -64,6 +72,17 @@ function Financeiro() {
   }, [orders, expenses, from, to, period, serviceById]);
 
   const max = data.ranking[0]?.[1].total ?? 1;
+
+  // "A receber" ignora o filtro de período: um fiado antigo continua devendo.
+  const pending = useMemo(
+    () =>
+      orders
+        .filter((o) => o.status === "FINALIZADO" && !o.paid)
+        .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1)),
+    [orders],
+  );
+  const pendingTotal = pending.reduce((s, o) => s + o.price, 0);
+  const [paying, setPaying] = useState<ServiceOrder | null>(null);
 
   return (
     <PhoneShell fab={false}>
@@ -89,6 +108,38 @@ function Financeiro() {
             {label}
           </button>
         ))}
+      </div>
+
+      <div className="px-5 pt-3">
+        <button
+          disabled={exporting}
+          onClick={async () => {
+            setExporting(true);
+            try {
+              await exportarPeriodo({
+                company,
+                from,
+                to,
+                orders: data.os,
+                expenses: data.periodExpenses,
+                summary: data,
+                clientById,
+                vehicleById,
+                serviceById,
+              });
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Não foi possível gerar a planilha",
+              );
+            } finally {
+              setExporting(false);
+            }
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-2 text-xs font-semibold text-foreground disabled:opacity-60"
+        >
+          <Download className="h-4 w-4" />
+          {exporting ? "Gerando planilha..." : "Exportar período para Excel"}
+        </button>
       </div>
 
       <section className="px-5 pt-4">
@@ -123,6 +174,44 @@ function Financeiro() {
           value={String(data.canceled)}
           hint="Não entram na receita"
         />
+      </section>
+
+      <section className="px-5 pt-6">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-bold">A receber</h2>
+          <span className="text-sm font-bold">{brl(pendingTotal)}</span>
+        </div>
+        <div className="rounded-2xl border border-border bg-card shadow-card">
+          {pending.map((o) => (
+            <div
+              key={o.id}
+              className="flex items-center gap-3 border-b border-border p-3.5 last:border-0"
+            >
+              <Link to="/os/$osId" params={{ osId: o.id }} className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">
+                  {clientById(o.clientId)?.name ?? "Cliente"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {o.code} • {formatDate(o.date)} • {brl(o.price)}
+                </p>
+              </Link>
+              <button
+                onClick={() => setPaying(o)}
+                className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground"
+              >
+                Recebido
+              </button>
+            </div>
+          ))}
+          {pending.length === 0 ? (
+            <p className="p-4 text-center text-xs text-muted-foreground">
+              Nenhum atendimento a receber.
+            </p>
+          ) : null}
+        </div>
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Atendimentos finalizados e ainda não pagos, de qualquer período.
+        </p>
       </section>
 
       <section className="px-5 pt-6">
@@ -167,6 +256,7 @@ function Financeiro() {
           <span className="text-sm font-bold">{brl(data.exp)}</span>
         </Link>
       </section>
+      <PaymentDrawer order={paying} onClose={() => setPaying(null)} />
     </PhoneShell>
   );
 }

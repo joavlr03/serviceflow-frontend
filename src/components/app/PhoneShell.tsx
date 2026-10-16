@@ -35,7 +35,7 @@ export function PhoneShell({
           {fab ? (
             <Link
               to="/os/nova"
-              aria-label="Nova ordem de serviço"
+              aria-label="Novo atendimento"
               className="absolute bottom-24 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-brand-accent text-secondary-foreground shadow-float transition-transform active:scale-95"
             >
               <Plus className="h-6 w-6" />

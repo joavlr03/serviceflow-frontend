@@ -6,6 +6,7 @@ import {
   MessageSquareText,
   Plus,
   Receipt,
+  Settings,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -44,9 +45,16 @@ function Dashboard() {
 
   return (
     <PhoneShell>
-      <header className="rounded-b-[2rem] bg-brand px-5 pb-8 pt-10 text-primary-foreground">
-        <p className="text-xs uppercase tracking-widest opacity-60">{company.segment}</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">{company.name}</h1>
+      <header className="relative rounded-b-[2rem] bg-brand px-5 pb-8 pt-10 text-primary-foreground">
+        <Link
+          to="/configuracoes"
+          aria-label="Configurações"
+          className="absolute right-5 top-9 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-primary-foreground/10 transition-colors active:bg-primary-foreground/20"
+        >
+          <Settings className="h-5 w-5" />
+        </Link>
+        <p className="pr-12 text-xs uppercase tracking-widest opacity-60">{company.segment}</p>
+        <h1 className="mt-1 pr-12 text-2xl font-extrabold tracking-tight">{company.name}</h1>
         <p className="mt-1 text-sm capitalize opacity-70">{formatLongDate(today)}</p>
 
         {next ? (
@@ -90,7 +98,7 @@ function Dashboard() {
         <h2 className="mb-3 text-sm font-bold">Atalhos rápidos</h2>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { to: "/os/nova", label: "Nova OS", icon: Plus },
+            { to: "/os/nova", label: "Novo atendimento", icon: Plus },
             { to: "/agenda", label: "Agenda", icon: CalendarDays },
             { to: "/clientes", label: "Clientes", icon: Users },
             { to: "/despesas", label: "Despesas", icon: Receipt },
@@ -159,14 +167,14 @@ function Dashboard() {
             <p className="text-sm font-bold">Mensagens de confirmação</p>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Gere a mensagem pronta da OS e envie você mesmo pelo WhatsApp, mantendo o contato
-            pessoal.
+            Gere a mensagem pronta do atendimento e envie você mesmo pelo WhatsApp, mantendo o
+            contato pessoal.
           </p>
         </div>
         <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card p-4">
           <CheckCircle2 className="h-4 w-4 text-success" />
           <p className="text-xs text-muted-foreground">
-            Receita realizada considera apenas OS finalizadas.
+            Receita realizada considera apenas atendimentos finalizados.
           </p>
           <TrendingUp className="ml-auto h-4 w-4 text-muted-foreground" />
         </div>

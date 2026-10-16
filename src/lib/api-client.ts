@@ -2,6 +2,7 @@ import type {
   Client,
   Company,
   Expense,
+  OrderPayment,
   OrderStatus,
   ServiceOrder,
   ServiceType,
@@ -87,6 +88,12 @@ async function request<T>(
       ...(authenticated && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...init.headers,
     },
+  }).catch(() => {
+    throw new ApiError(
+      0,
+      "NETWORK_ERROR",
+      "Sem conexão com o servidor. Verifique a internet e tente de novo.",
+    );
   });
   if (authenticated && response.status === 401 && retry && (await refreshSession()))
     return request<T>(path, init, false, true);
@@ -95,7 +102,10 @@ async function request<T>(
     throw new ApiError(
       response.status,
       error.code ?? "API_ERROR",
-      error.message ?? "Falha na comunicação com a API",
+      error.message ??
+        (response.status >= 500
+          ? `Erro no servidor (código ${response.status}). Tente de novo; se continuar, avise o suporte.`
+          : `O servidor recusou a operação (código ${response.status}).`),
     );
   }
   if (response.status === 204) return undefined as T;
@@ -122,6 +132,7 @@ export async function setupOwner(input: {
   ownerName: string;
   email: string;
   password: string;
+  inviteKey: string;
 }) {
   return request<{ companyId: number; userId: number }>(
     "/setup",
@@ -178,6 +189,8 @@ const service = (x: ApiService): ServiceType => ({ ...x, id: String(x.id) });
 const order = (x: ApiOrder): ServiceOrder => ({
   ...x,
   id: String(x.id),
+  // API ainda gera "OS-1042"; nas telas o termo é "Atendimento"
+  code: String(x.code).replace(/^OS-/, "AT-"),
   clientId: String(x.clientId),
   vehicleId: String(x.vehicleId),
   serviceId: String(x.serviceId),
@@ -199,6 +212,13 @@ export const api = {
     const x = await request<ApiCompany>("/empresa");
     return { ...x, id: String(x.id) } as Company;
   },
+  updateThemeColor: async (color: string) => {
+    const x = await request<ApiCompany>("/empresa/tema", {
+      method: "PUT",
+      body: JSON.stringify({ color }),
+    });
+    return { ...x, id: String(x.id) } as Company;
+  },
   clients: async () => (await request<ApiClient[]>("/clientes")).map(client),
   createClient: async (x: Omit<Client, "id" | "createdAt">) =>
     client(await request<ApiClient>("/clientes", { method: "POST", body: JSON.stringify(x) })),
@@ -214,6 +234,14 @@ export const api = {
       }),
     ),
   services: async () => (await request<ApiService[]>("/servicos")).map(service),
+  saveService: async (id: string | null, x: Omit<ServiceType, "id">) =>
+    service(
+      await request<ApiService>(id ? `/servicos/${id}` : "/servicos", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(x),
+      }),
+    ),
+  deleteService: (id: string) => request<void>(`/servicos/${id}`, { method: "DELETE" }),
   orders: async () =>
     (await request<ApiOrder[]>(`/ordens-servico?${operationalPeriod()}`)).map(order),
   createOrder: async (x: Omit<ServiceOrder, "id" | "code">, idempotencyKey: string) => {
@@ -243,11 +271,11 @@ export const api = {
         }),
       }),
     ),
-  setOrderStatus: async (id: string, status: OrderStatus) =>
+  setOrderStatus: async (id: string, status: OrderStatus, payment?: OrderPayment) =>
     order(
       await request<ApiOrder>(`/ordens-servico/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...payment }),
       }),
     ),
   expenses: async () =>

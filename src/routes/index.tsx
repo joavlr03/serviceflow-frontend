@@ -19,7 +19,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "ServiceFlow: agenda, ordens de serviço, clientes e financeiro em um só app para lava-rápidos e prestadores de serviço.",
+          "ServiceFlow: agenda, atendimentos, clientes e financeiro em um só app para lava-rápidos e prestadores de serviço.",
       },
       { property: "og:title", content: "ServiceFlow — Gestão para prestadores de serviço" },
       {
@@ -39,7 +39,9 @@ function Login() {
   const [companyName, setCompanyName] = useState("");
   const [segment, setSegment] = useState("Estética Automotiva");
   const [ownerName, setOwnerName] = useState("");
+  const [inviteKey, setInviteKey] = useState("");
   const [setupAvailable, setSetupAvailable] = useState<boolean | null>(null);
+  const [forceSetup, setForceSetup] = useState(false);
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +50,9 @@ function Login() {
       .then(({ available }) => setSetupAvailable(available))
       .catch(() => setSetupAvailable(false));
   }, []);
+
+  const showSetup = forceSetup || setupAvailable === true;
+  const ready = forceSetup || setupAvailable !== null;
 
   return (
     <div className="min-h-screen bg-muted/60 py-0 sm:py-8">
@@ -66,14 +71,14 @@ function Login() {
           className="-mt-8 flex-1 space-y-4 rounded-t-[2rem] bg-background px-6 pt-8"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (setupAvailable === null) return;
+            if (!ready) return;
             setLoading(true);
             try {
-              if (setupAvailable) {
+              if (showSetup) {
                 if (password !== passwordConfirmation) {
                   throw new Error("As senhas não coincidem");
                 }
-                await setupOwner({ companyName, segment, ownerName, email, password });
+                await setupOwner({ companyName, segment, ownerName, email, password, inviteKey });
                 const user = await login(email, password);
                 window.dispatchEvent(new Event("serviceflow-auth"));
                 toast.success(`Bem-vindo, ${user.name}!`);
@@ -111,16 +116,16 @@ function Login() {
         >
           <div>
             <h2 className="text-xl font-bold tracking-tight">
-              {setupAvailable ? "Criar acesso do proprietário" : "Entrar"}
+              {showSetup ? "Criar acesso do proprietário" : "Entrar"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {setupAvailable
+              {showSetup
                 ? "Cadastre sua empresa para começar a usar o ServiceFlow."
                 : "Acesse o painel do seu estabelecimento."}
             </p>
           </div>
 
-          {setupAvailable && (
+          {showSetup && (
             <>
               <Field label="Nome da empresa">
                 <div className="relative">
@@ -165,6 +170,21 @@ function Login() {
                   />
                 </div>
               </Field>
+
+              <Field label="Chave de convite">
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    required
+                    maxLength={100}
+                    value={inviteKey}
+                    onChange={(e) => setInviteKey(e.target.value)}
+                    className={`${inputClass} pl-10`}
+                    placeholder="Chave fornecida pela ServiceFlow"
+                    autoComplete="off"
+                  />
+                </div>
+              </Field>
             </>
           )}
 
@@ -192,13 +212,13 @@ function Login() {
               <input
                 type={show ? "text" : "password"}
                 required
-                minLength={setupAvailable ? 12 : undefined}
+                minLength={showSetup ? 12 : undefined}
                 maxLength={72}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`${inputClass} pl-10 pr-10`}
                 placeholder="••••••"
-                autoComplete={setupAvailable ? "new-password" : "current-password"}
+                autoComplete={showSetup ? "new-password" : "current-password"}
                 autoCapitalize="none"
                 spellCheck={false}
               />
@@ -213,7 +233,7 @@ function Login() {
             </div>
           </Field>
 
-          {setupAvailable && (
+          {showSetup && (
             <>
               <Field label="Confirmar senha">
                 <div className="relative">
@@ -240,7 +260,7 @@ function Login() {
             </>
           )}
 
-          {!setupAvailable && (
+          {!showSetup && (
             <button
               type="button"
               onClick={async () => {
@@ -263,17 +283,25 @@ function Login() {
             </button>
           )}
 
-          <PrimaryButton type="submit" disabled={loading || setupAvailable === null}>
-            {setupAvailable === null
+          <PrimaryButton type="submit" disabled={loading || !ready}>
+            {!ready
               ? "Verificando cadastro..."
               : loading
-                ? setupAvailable
+                ? showSetup
                   ? "Criando cadastro..."
                   : "Entrando..."
-                : setupAvailable
+                : showSetup
                   ? "Criar cadastro"
                   : "Entrar"}
           </PrimaryButton>
+
+          <button
+            type="button"
+            onClick={() => setForceSetup((v) => !v)}
+            className="pb-2 text-center text-[11px] text-muted-foreground underline"
+          >
+            {showSetup ? "Já tenho uma empresa cadastrada" : "Cadastrar outra empresa"}
+          </button>
 
           <p className="pb-8 pt-2 text-center text-[11px] text-muted-foreground">
             ServiceFlow • Plataforma de gestão para prestadores de serviço

@@ -8,10 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { api, ensureSession } from "./api-client";
+import { applyThemeColor } from "./theme";
 import type {
   Client,
   Company,
   Expense,
+  OrderPayment,
   OrderStatus,
   ServiceOrder,
   ServiceType,
@@ -31,8 +33,11 @@ interface StoreValue {
   addVehicle: (v: Omit<Vehicle, "id">) => Promise<Vehicle>;
   addOrder: (o: Omit<ServiceOrder, "id" | "code">, idempotencyKey: string) => Promise<ServiceOrder>;
   updateOrder: (id: string, patch: Partial<ServiceOrder>) => Promise<void>;
-  setOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  setOrderStatus: (id: string, status: OrderStatus, payment?: OrderPayment) => Promise<void>;
   addExpense: (e: Omit<Expense, "id">) => Promise<void>;
+  setThemeColor: (color: string) => Promise<void>;
+  saveService: (id: string | null, s: Omit<ServiceType, "id">) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
   clientById: (id: string) => Client | undefined;
   vehicleById: (id: string) => Vehicle | undefined;
   serviceById: (id: string) => ServiceType | undefined;
@@ -63,6 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ]);
       const vs = (await Promise.all(cs.map((c) => api.clientVehicles(c.id)))).flat();
       setCompany(co);
+      applyThemeColor(co.themeColor);
       setClients(cs);
       setServices(ss);
       setOrders(os);
@@ -98,10 +104,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setOrders((p) => [o, ...p]);
     return o;
   }, []);
-  const setOrderStatus = useCallback(async (id: string, status: OrderStatus) => {
-    const o = await api.setOrderStatus(id, status);
-    setOrders((p) => p.map((x) => (x.id === id ? o : x)));
-  }, []);
+  const setOrderStatus = useCallback(
+    async (id: string, status: OrderStatus, payment?: OrderPayment) => {
+      const o = await api.setOrderStatus(id, status, payment);
+      setOrders((p) => p.map((x) => (x.id === id ? o : x)));
+    },
+    [],
+  );
   const updateOrder = useCallback(
     async (id: string, patch: Partial<ServiceOrder>) => {
       const current = orders.find((o) => o.id === id);
@@ -115,6 +124,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addExpense = useCallback(async (x: Omit<Expense, "id">) => {
     const e = await api.createExpense(x);
     setExpenses((p) => [e, ...p]);
+  }, []);
+  const setThemeColor = useCallback(async (color: string) => {
+    const co = await api.updateThemeColor(color);
+    setCompany(co);
+    applyThemeColor(co.themeColor);
+  }, []);
+  const saveService = useCallback(async (id: string | null, x: Omit<ServiceType, "id">) => {
+    const s = await api.saveService(id, x);
+    setServices((p) =>
+      [...p.filter((y) => y.id !== s.id), s].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+  }, []);
+  const deleteService = useCallback(async (id: string) => {
+    await api.deleteService(id);
+    setServices((p) => p.filter((s) => s.id !== id));
   }, []);
   const value = useMemo<StoreValue>(
     () => ({
@@ -132,6 +156,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateOrder,
       setOrderStatus,
       addExpense,
+      setThemeColor,
+      saveService,
+      deleteService,
       clientById: (id) => clients.find((x) => x.id === id),
       vehicleById: (id) => vehicles.find((x) => x.id === id),
       serviceById: (id) => services.find((x) => x.id === id),
@@ -157,6 +184,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateOrder,
       setOrderStatus,
       addExpense,
+      setThemeColor,
+      saveService,
+      deleteService,
       reload,
     ],
   );

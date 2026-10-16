@@ -121,7 +121,7 @@ function ClientDetail() {
               to="/os/nova"
               className="flex items-center justify-center gap-2 rounded-xl bg-brand-accent py-2.5 text-xs font-semibold text-secondary-foreground"
             >
-              <Plus className="h-4 w-4" /> Nova OS
+              <Plus className="h-4 w-4" /> Novo atendimento
             </Link>
           </div>
         </div>

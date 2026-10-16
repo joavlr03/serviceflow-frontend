@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Ban, Check, CheckCircle2, Copy, MessageCircle, Pencil } from "lucide-react";
+import { Ban, Check, CheckCircle2, Copy, MessageCircle, Pencil, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import {
@@ -10,23 +10,26 @@ import {
   StatusBadge,
   TopBar,
   inputClass,
+  paymentText,
 } from "@/components/app/ui-bits";
+import { PaymentDrawer } from "@/components/app/PaymentDrawer";
 import { useStore } from "@/lib/store";
 import { brl, formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/os/$osId")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  // Opcional: os links da agenda e do financeiro abrem o detalhe sem passar "criada".
+  validateSearch: (search: Record<string, unknown>): { criada?: boolean } => ({
     criada: search["criada"] === true || search["criada"] === "true",
   }),
   head: () => ({
     meta: [
-      { title: "Detalhes da OS e mensagem | ServiceFlow" },
+      { title: "Detalhes do atendimento e mensagem | ServiceFlow" },
       {
         name: "description",
         content:
-          "Veja os detalhes da ordem de serviço, finalize, cancele e gere a mensagem de WhatsApp.",
+          "Veja os detalhes do atendimento, finalize, cancele e gere a mensagem de WhatsApp.",
       },
-      { property: "og:title", content: "Detalhes da OS e mensagem | ServiceFlow" },
+      { property: "og:title", content: "Detalhes do atendimento e mensagem | ServiceFlow" },
       { property: "og:description", content: "Mensagem profissional pronta para envio manual." },
     ],
   }),
@@ -62,13 +65,14 @@ function OsDetail() {
 
   const [message, setMessage] = useState(defaultMessage);
   const [editing, setEditing] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   if (!order) {
     return (
       <PhoneShell fab={false} bottomNav={false}>
-        <TopBar title="Ordem de serviço" backTo="/agenda" />
+        <TopBar title="Atendimento" backTo="/agenda" />
         <div className="p-5">
-          <EmptyState title="OS não encontrada" description="Volte para a agenda." />
+          <EmptyState title="Atendimento não encontrado" description="Volte para a agenda." />
         </div>
       </PhoneShell>
     );
@@ -83,11 +87,12 @@ function OsDetail() {
     { k: "Data", v: formatDate(order.date) },
     { k: "Horário", v: order.time },
     { k: "Valor", v: brl(order.price) },
+    ...(order.status === "FINALIZADO" ? [{ k: "Pagamento", v: paymentText(order) }] : []),
   ];
 
   return (
     <PhoneShell fab={false} bottomNav={false}>
-      <TopBar title={order.code} subtitle="Ordem de serviço" backTo="/agenda" />
+      <TopBar title={order.code} subtitle="Atendimento" backTo="/agenda" />
 
       {criada ? (
         <div
@@ -96,9 +101,9 @@ function OsDetail() {
         >
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <p className="text-sm font-bold">OS registrada com sucesso</p>
+            <p className="text-sm font-bold">Atendimento registrado com sucesso</p>
             <p className="mt-0.5 text-xs text-foreground">
-              {order.code} já foi adicionada à agenda e ao faturamento previsto.
+              {order.code} já foi adicionado à agenda e ao faturamento previsto.
             </p>
           </div>
         </div>
@@ -181,27 +186,29 @@ function OsDetail() {
       <section className="space-y-2.5 px-5 pb-10 pt-5">
         {order.status === "AGENDADO" ? (
           <>
-            <PrimaryButton
-              onClick={async () => {
-                await setOrderStatus(order.id, "FINALIZADO");
-                toast.success("OS finalizada — receita realizada atualizada");
-              }}
-            >
+            <PrimaryButton onClick={() => setPaying(true)}>
               <Check className="h-4 w-4" /> Marcar como finalizada
             </PrimaryButton>
             <GhostButton
               onClick={async () => {
                 await setOrderStatus(order.id, "CANCELADO");
-                toast("OS cancelada — removida do faturamento previsto");
+                toast("Atendimento cancelado — removido do faturamento previsto");
               }}
             >
               <Ban className="h-4 w-4" /> Cancelar atendimento
             </GhostButton>
           </>
         ) : (
-          <GhostButton onClick={() => void setOrderStatus(order.id, "AGENDADO")}>
-            Reabrir como agendado
-          </GhostButton>
+          <>
+            {order.status === "FINALIZADO" && !order.paid ? (
+              <PrimaryButton onClick={() => setPaying(true)}>
+                <Wallet className="h-4 w-4" /> Marcar como pago
+              </PrimaryButton>
+            ) : null}
+            <GhostButton onClick={() => void setOrderStatus(order.id, "AGENDADO")}>
+              Reabrir como agendado
+            </GhostButton>
+          </>
         )}
         <Link
           to="/clientes/$clientId"
@@ -211,6 +218,7 @@ function OsDetail() {
           Ver perfil do cliente
         </Link>
       </section>
+      <PaymentDrawer order={paying ? order : null} onClose={() => setPaying(false)} />
     </PhoneShell>
   );
 }

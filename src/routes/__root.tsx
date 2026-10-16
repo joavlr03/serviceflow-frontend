@@ -13,6 +13,7 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { StoreProvider } from "../lib/store";
+import { themeBootScript } from "../lib/theme";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -37,7 +38,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -84,13 +85,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Plataforma de gestão com agenda, ordens de serviço, clientes e financeiro para lava-rápidos e prestadores de serviço.",
+          "Plataforma de gestão com agenda, atendimentos, clientes e financeiro para lava-rápidos e prestadores de serviço.",
       },
       { name: "author", content: "ServiceFlow" },
       { property: "og:title", content: "ServiceFlow — Gestão para prestadores de serviço" },
       {
         property: "og:description",
-        content: "Agenda, ordens de serviço, clientes e financeiro em um só app.",
+        content: "Agenda, atendimentos, clientes e financeiro em um só app.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -118,9 +119,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: o script abaixo aplica a cor da empresa no <html> antes do React
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body>
         {children}
