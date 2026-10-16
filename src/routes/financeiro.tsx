@@ -2,11 +2,20 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Download, Receipt } from "lucide-react";
 import { toast } from "sonner";
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { StatCard, TopBar } from "@/components/app/ui-bits";
 import { PaymentDrawer } from "@/components/app/PaymentDrawer";
 import { useStore } from "@/lib/store";
-import { brl, formatDate, startOfMonthISO, startOfWeekISO, todayISO } from "@/lib/format";
+import { brl, formatDate, parseISO, startOfMonthISO, startOfWeekISO, todayISO } from "@/lib/format";
 import { exportarPeriodo } from "@/lib/export-excel";
 import type { ServiceOrder } from "@/lib/types";
 
@@ -29,6 +38,33 @@ export const Route = createFileRoute("/financeiro")({
 });
 
 type Period = "hoje" | "semana" | "mes";
+
+const shiftISO = (iso: string, days: number) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+// Último dia do período atual e o período anterior inteiro, do mesmo tipo (ontem, semana passada, mês passado).
+function periodRange(period: Period, from: string) {
+  if (period === "hoje")
+    return { end: from, prevFrom: shiftISO(from, -1), prevTo: shiftISO(from, -1) };
+  if (period === "semana")
+    return { end: shiftISO(from, 6), prevFrom: shiftISO(from, -7), prevTo: shiftISO(from, -1) };
+  const d = new Date(`${from}T00:00:00Z`);
+  const iso = (m: number, day: number) =>
+    new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + m, day)).toISOString().slice(0, 10);
+  return { end: iso(1, 0), prevFrom: iso(-1, 1), prevTo: shiftISO(from, -1) };
+}
+
+const variation = (cur: number, prev: number) =>
+  prev === 0 ? null : ((cur - prev) / Math.abs(prev)) * 100;
+
+const chartConfig = {
+  receita: { label: "Receita", color: "var(--chart-1)" },
+  despesa: { label: "Despesa", color: "var(--chart-5)" },
+  lucro: { label: "Lucro", color: "var(--chart-2)" },
+} satisfies ChartConfig;
 
 function Financeiro() {
   const { company, orders, expenses, clientById, vehicleById, serviceById } = useStore();
@@ -57,9 +93,51 @@ function Financeiro() {
       byService.set(name, { count: cur.count + 1, total: cur.total + o.price });
     });
 
+    const { end, prevFrom, prevTo } = periodRange(period, from);
+    const sumOrders = (pick: (o: ServiceOrder) => boolean) =>
+      finished.filter(pick).reduce((s, o) => s + o.price, 0);
+
+    // Hoje: receita por horário (despesa não tem hora). Semana/Mês: um ponto por dia.
+    let series: Array<{ label: string; receita: number; despesa?: number; lucro?: number }>;
+    if (period === "hoje") {
+      const hours = [...new Set(finished.map((o) => o.time.slice(0, 2)))].sort();
+      series = hours.map((h) => ({
+        label: `${h}h`,
+        receita: sumOrders((o) => o.time.startsWith(h)),
+      }));
+    } else {
+      series = [];
+      for (let d = from; d <= end; d = shiftISO(d, 1)) {
+        const receita = sumOrders((o) => o.date === d);
+        const despesa = periodExpenses
+          .filter((e) => e.date === d)
+          .reduce((s, e) => s + e.amount, 0);
+        const label =
+          period === "semana"
+            ? parseISO(d).toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "")
+            : String(Number(d.slice(8)));
+        series.push({ label, receita, despesa, lucro: receita - despesa });
+      }
+    }
+
+    const byCategory = new Map<string, number>();
+    periodExpenses.forEach((e) =>
+      byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + e.amount),
+    );
+
+    const prevRealized = orders
+      .filter((o) => o.status === "FINALIZADO" && o.date >= prevFrom && o.date <= prevTo)
+      .reduce((s, o) => s + o.price, 0);
+    const prevExp = expenses
+      .filter((e) => e.date >= prevFrom && e.date <= prevTo)
+      .reduce((s, e) => s + e.amount, 0);
+
     return {
       os,
       periodExpenses,
+      series,
+      categories: [...byCategory.entries()].sort((a, b) => b[1] - a[1]),
+      previous: { realized: prevRealized, exp: prevExp, profit: prevRealized - prevExp },
       realized,
       forecast,
       exp,
@@ -72,6 +150,10 @@ function Financeiro() {
   }, [orders, expenses, from, to, period, serviceById]);
 
   const max = data.ranking[0]?.[1].total ?? 1;
+  const maxCategory = data.categories[0]?.[1] ?? 1;
+  const empty = data.realized === 0 && data.exp === 0;
+  const previousLabel =
+    period === "hoje" ? "ontem" : period === "semana" ? "semana passada" : "mês passado";
 
   // "A receber" ignora o filtro de período: um fiado antigo continua devendo.
   const pending = useMemo(
@@ -174,6 +256,123 @@ function Financeiro() {
           value={String(data.canceled)}
           hint="Não entram na receita"
         />
+      </section>
+
+      <section className="px-5 pt-6">
+        <h2 className="mb-3 text-sm font-bold">
+          {period === "hoje" ? "Receita por horário" : "Receita × despesa"}
+        </h2>
+        <div className="rounded-2xl border border-border bg-card p-3 shadow-card">
+          {empty ? (
+            <p className="p-4 text-center text-xs text-muted-foreground">
+              Sem movimentação neste período.
+            </p>
+          ) : (
+            <ChartContainer config={chartConfig} className="aspect-auto h-48 w-full">
+              <ComposedChart data={data.series} margin={{ left: 0, right: 4, top: 8 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={10}
+                  interval="preserveStartEnd"
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name) => (
+                        <div className="flex w-full justify-between gap-3">
+                          <span className="text-muted-foreground">
+                            {chartConfig[name as keyof typeof chartConfig]?.label ?? name}
+                          </span>
+                          <span className="font-medium tabular-nums">{brl(Number(value))}</span>
+                        </div>
+                      )}
+                    />
+                  }
+                />
+                <Bar dataKey="receita" fill="var(--color-receita)" radius={3} />
+                {/* Recharts não enxerga filhos dentro de fragmento: uma condição por série. */}
+                {period !== "hoje" && (
+                  <Bar dataKey="despesa" fill="var(--color-despesa)" radius={3} />
+                )}
+                {period !== "hoje" && (
+                  <Line
+                    dataKey="lucro"
+                    stroke="var(--color-lucro)"
+                    strokeWidth={2}
+                    dot={false}
+                    type="monotone"
+                  />
+                )}
+                {period !== "hoje" && <ChartLegend content={<ChartLegendContent />} />}
+              </ComposedChart>
+            </ChartContainer>
+          )}
+        </div>
+        {period === "hoje" && !empty ? (
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            Despesas do dia: {brl(data.exp)} (despesas não têm horário).
+          </p>
+        ) : null}
+      </section>
+
+      <section className="px-5 pt-6">
+        <h2 className="mb-3 text-sm font-bold">Comparado com {previousLabel}</h2>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ["Receita", data.realized, data.previous.realized, true],
+              ["Despesa", data.exp, data.previous.exp, false],
+              ["Lucro", data.profit, data.previous.profit, true],
+            ] as Array<[string, number, number, boolean]>
+          ).map(([label, cur, prev, upIsGood]) => {
+            const v = variation(cur, prev);
+            const good = v !== null && (upIsGood ? v > 0 : v < 0);
+            return (
+              <div key={label} className="rounded-2xl border border-border bg-card p-3 shadow-card">
+                <p className="text-[11px] text-muted-foreground">{label}</p>
+                <p className="mt-0.5 text-sm font-bold">{brl(cur)}</p>
+                <p
+                  className={`mt-1 text-[11px] font-semibold ${
+                    v === null || v === 0
+                      ? "text-muted-foreground"
+                      : good
+                        ? "text-emerald-600"
+                        : "text-destructive"
+                  }`}
+                >
+                  {v === null ? "—" : `${v > 0 ? "+" : ""}${Math.round(v)}%`}
+                </p>
+                <p className="text-[10px] text-muted-foreground">antes {brl(prev)}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="px-5 pt-6">
+        <h2 className="mb-3 text-sm font-bold">Despesas por categoria</h2>
+        <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-card">
+          {data.categories.map(([name, total]) => (
+            <div key={name}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold">{name}</span>
+                <span className="text-muted-foreground">{brl(total)}</span>
+              </div>
+              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-chart-5"
+                  style={{ width: `${Math.max(8, (total / maxCategory) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+          {data.categories.length === 0 ? (
+            <p className="text-center text-xs text-muted-foreground">Nenhuma despesa no período.</p>
+          ) : null}
+        </div>
       </section>
 
       <section className="px-5 pt-6">
