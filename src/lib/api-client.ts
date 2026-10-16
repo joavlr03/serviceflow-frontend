@@ -88,6 +88,12 @@ async function request<T>(
       ...(authenticated && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...init.headers,
     },
+  }).catch(() => {
+    throw new ApiError(
+      0,
+      "NETWORK_ERROR",
+      "Sem conexão com o servidor. Verifique a internet e tente de novo.",
+    );
   });
   if (authenticated && response.status === 401 && retry && (await refreshSession()))
     return request<T>(path, init, false, true);
@@ -96,7 +102,10 @@ async function request<T>(
     throw new ApiError(
       response.status,
       error.code ?? "API_ERROR",
-      error.message ?? "Falha na comunicação com a API",
+      error.message ??
+        (response.status >= 500
+          ? `Erro no servidor (código ${response.status}). Tente de novo; se continuar, avise o suporte.`
+          : `O servidor recusou a operação (código ${response.status}).`),
     );
   }
   if (response.status === 204) return undefined as T;
