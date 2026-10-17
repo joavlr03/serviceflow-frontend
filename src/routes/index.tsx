@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Building2, Droplets, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { Building2, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { useStoredAppIcon } from "@/lib/app-icon";
 import { Field, PrimaryButton, inputClass } from "@/components/app/ui-bits";
 import {
   changePassword,
@@ -32,6 +33,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Login() {
+  // Último ícone da empresa usado neste aparelho (gota se nunca entrou).
+  const { Icon: AppIcon } = useStoredAppIcon();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,7 +62,7 @@ function Login() {
       <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col overflow-hidden bg-background shadow-card sm:min-h-[860px] sm:rounded-[2.25rem] sm:border sm:border-border">
         <div className="bg-brand px-6 pb-14 pt-16 text-primary-foreground">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-accent shadow-float">
-            <Droplets className="h-7 w-7" />
+            <AppIcon className="h-7 w-7" />
           </div>
           <h1 className="mt-6 text-3xl font-extrabold tracking-tight">ServiceFlow</h1>
           <p className="mt-2 max-w-[16rem] text-sm opacity-75">

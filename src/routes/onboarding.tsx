@@ -9,6 +9,7 @@ import { useStore } from "@/lib/store";
 import { brl, parseMoney } from "@/lib/format";
 import { DEFAULT_THEME_COLOR, previewThemeColor, themePalette } from "@/lib/theme";
 import type { OnboardingInput } from "@/lib/types";
+import { appIconOf, appIcons } from "@/lib/app-icon";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Primeiro acesso | ServiceFlow" }] }),
@@ -24,10 +25,11 @@ const row = (name = "", price = "", duration = "60", stock = "0"): Row => ({
 });
 
 // Serviços sugeridos por segmento; tudo é editável no passo 2.
-const segmentos: Array<{ nome: string; veiculo: boolean; servicos: Row[] }> = [
+const segmentos: Array<{ nome: string; veiculo: boolean; icone: string; servicos: Row[] }> = [
   {
     nome: "Lava-rápido / estética automotiva",
     veiculo: true,
+    icone: "gota",
     servicos: [
       row("Lavagem simples", "45,00", "40"),
       row("Lavagem completa", "80,00", "70"),
@@ -38,6 +40,7 @@ const segmentos: Array<{ nome: string; veiculo: boolean; servicos: Row[] }> = [
   {
     nome: "Oficina",
     veiculo: true,
+    icone: "ferramenta",
     servicos: [
       row("Troca de óleo", "120,00", "40"),
       row("Alinhamento e balanceamento", "150,00", "60"),
@@ -48,6 +51,7 @@ const segmentos: Array<{ nome: string; veiculo: boolean; servicos: Row[] }> = [
   {
     nome: "Salão / barbearia",
     veiculo: false,
+    icone: "tesoura",
     servicos: [
       row("Corte", "50,00", "40"),
       row("Barba", "35,00", "30"),
@@ -58,6 +62,7 @@ const segmentos: Array<{ nome: string; veiculo: boolean; servicos: Row[] }> = [
   {
     nome: "Estética / beleza",
     veiculo: false,
+    icone: "brilho",
     servicos: [
       row("Limpeza de pele", "120,00", "60"),
       row("Design de sobrancelha", "40,00", "30"),
@@ -65,10 +70,10 @@ const segmentos: Array<{ nome: string; veiculo: boolean; servicos: Row[] }> = [
       row("Massagem", "100,00", "60"),
     ],
   },
-  { nome: "Outro", veiculo: false, servicos: [row()] },
+  { nome: "Outro", veiculo: false, icone: "maleta", servicos: [row()] },
 ];
 
-const passos = ["Empresa", "Itens", "Tema", "Resumo"];
+const passos = ["Empresa", "Itens", "Visual", "Resumo"];
 
 function Onboarding() {
   const { company, completeOnboarding } = useStore();
@@ -82,6 +87,8 @@ function Onboarding() {
   const [services, setServices] = useState<Row[]>(segmentos[0]!.servicos);
   const [products, setProducts] = useState<Row[]>([row()]);
   const [color, setColor] = useState<string>(DEFAULT_THEME_COLOR);
+  // Sugestão pelo segmento (ou caixas no modo vendas); a pessoa troca no passo Visual.
+  const [icon, setIcon] = useState(segmentos[0]!.icone);
   const [saving, setSaving] = useState(false);
   const done = useRef(false);
   const vendas = mode === "VENDAS";
@@ -100,6 +107,7 @@ function Onboarding() {
     setSegment(nome);
     setUsesVehicle(s.veiculo);
     setServices(s.servicos);
+    if (mode === "SERVICOS") setIcon(s.icone);
   };
 
   const rows = vendas ? products : services;
@@ -143,6 +151,7 @@ function Onboarding() {
         usesVehicle: !vendas && usesVehicle,
         usesDuration: !vendas && usesDuration,
         themeColor: color,
+        appIcon: icon,
         services: vendas
           ? []
           : filled.map((r) => ({
@@ -220,7 +229,14 @@ function Onboarding() {
                     type="button"
                     role="radio"
                     aria-checked={mode === key}
-                    onClick={() => setMode(key)}
+                    onClick={() => {
+                      setMode(key);
+                      setIcon(
+                        key === "VENDAS"
+                          ? "caixas"
+                          : segmentos.find((x) => x.nome === segment)!.icone,
+                      );
+                    }}
                     className={`rounded-xl border p-3 text-left transition-colors ${
                       mode === key ? "border-secondary bg-secondary/8" : "border-border bg-card"
                     }`}
@@ -388,6 +404,48 @@ function Onboarding() {
           </>
         ) : null}
 
+        {step === 2 ? (
+          <>
+            <p className="pt-2 text-xs text-muted-foreground">
+              Escolha o ícone que mais combina com você. Ele aparece no atalho da tela inicial do
+              celular.
+            </p>
+            <div
+              role="radiogroup"
+              aria-label="Ícone do app"
+              className="grid grid-cols-4 gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+            >
+              {appIcons.map(({ key, name: label, Icon }) => {
+                const active = icon === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={label}
+                    onClick={() => setIcon(key)}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <span
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-accent text-white transition-transform ${
+                        active
+                          ? "scale-110 ring-2 ring-foreground ring-offset-2 ring-offset-card"
+                          : ""
+                      }`}
+                    >
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <span className="text-center text-[10px] leading-tight text-muted-foreground">
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
         {step === 3 ? (
           <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
             {[
@@ -405,6 +463,7 @@ function Onboarding() {
                   .join(", "),
               },
               { k: "Cor", v: themePalette.find((p) => p.color === color)?.name ?? color },
+              { k: "Ícone", v: appIconOf(icon).name },
             ].map((x) => (
               <div
                 key={x.k}
@@ -415,6 +474,46 @@ function Onboarding() {
               </div>
             ))}
           </div>
+        ) : null}
+
+        {step === 3 ? (
+          <section
+            aria-labelledby="atalho-iphone"
+            className="rounded-2xl border border-secondary/20 bg-secondary/8 p-4"
+          >
+            <div className="flex items-center gap-3">
+              {/* Prévia do atalho: o PNG que o iPhone vai copiar */}
+              <img
+                src={`/icons/${appIconOf(icon).key}-180.png`}
+                alt=""
+                width={56}
+                height={56}
+                className="h-14 w-14 rounded-[14px] shadow-card"
+              />
+              <div>
+                <h2 id="atalho-iphone" className="text-sm font-bold">
+                  Tenha o app na tela do iPhone
+                </h2>
+                <p className="text-xs text-muted-foreground">Depois de concluir, faça uma vez:</p>
+              </div>
+            </div>
+            <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-xs text-foreground">
+              <li>
+                Abra o app no <strong>Safari</strong> (precisa ser o Safari) e entre com seu login.
+              </li>
+              <li>
+                Toque em <strong>Compartilhar</strong> (o quadrado com a seta para cima).
+              </li>
+              <li>
+                Escolha <strong>Adicionar à Tela de Início</strong> e toque em{" "}
+                <strong>Adicionar</strong>.
+              </li>
+            </ol>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              O ícone acima aparece na tela do celular e o app abre em tela cheia. No Android, use o
+              menu do Chrome → Instalar app.
+            </p>
+          </section>
         ) : null}
       </div>
 
