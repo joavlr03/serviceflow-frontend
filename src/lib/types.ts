@@ -27,12 +27,29 @@ export interface ServiceType {
   active: boolean;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  active: boolean;
+}
+
+// Item de uma venda; o preço é o do produto na hora da venda.
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface ServiceOrder {
   id: string;
   code: string;
   clientId: string;
   vehicleId: string;
-  serviceId: string;
+  serviceId: string; // "" numa venda (modo VENDAS), que tem itens
+  items?: OrderItem[];
   description?: string;
   date: string; // yyyy-MM-dd
   time: string; // HH:mm
@@ -45,15 +62,15 @@ export interface ServiceOrder {
 
 export type OrderPayment = Pick<ServiceOrder, "paymentMethod" | "paid">;
 
-export type ExpenseCategory =
-  | "Produtos"
-  | "Água e Energia"
-  | "Aluguel"
-  | "Funcionários"
-  | "Manutenção"
-  | "Impostos"
-  | "Fornecedores"
-  | "Outros";
+// Nome de uma categoria cadastrada pela empresa (tela Categorias).
+export type ExpenseCategory = string;
+
+export interface Category {
+  id: string;
+  name: string;
+  type: "DESPESA" | "ENTRADA";
+  active: boolean;
+}
 
 export interface Expense {
   id: string;
@@ -64,6 +81,9 @@ export interface Expense {
   notes?: string;
 }
 
+// Entrada avulsa: receita que não vem de atendimento. Mesmo formato da despesa.
+export type Income = Expense;
+
 export interface Company {
   id: string;
   name: string;
@@ -72,4 +92,19 @@ export interface Company {
   email: string;
   plan: string;
   themeColor?: string | null; // #RRGGBB; null = cor padrão
+  usageMode?: "SERVICOS" | "VENDAS";
+  usesVehicle?: boolean; // ausente = true (lava-rápido, oficina)
+  usesDuration?: boolean; // ausente = true
+  onboardingDone?: boolean; // false = cai no assistente de primeiro acesso
+}
+
+export interface OnboardingInput {
+  name: string;
+  segment: string;
+  usageMode: "SERVICOS" | "VENDAS";
+  usesVehicle: boolean;
+  usesDuration: boolean;
+  themeColor: string | null;
+  services: Array<{ name: string; price: number; durationMin?: number }>;
+  products: Array<{ name: string; price: number; stock: number }>;
 }

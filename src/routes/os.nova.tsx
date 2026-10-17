@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check, LoaderCircle, Minus, Plus } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { Field, PrimaryButton, TopBar, inputClass } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, todayISO } from "@/lib/format";
 import { parseMoney } from "@/lib/format";
 import { toast } from "sonner";
@@ -38,8 +39,20 @@ function NovaOS() {
     addOrder,
     addClient,
     addVehicle,
+    company,
+    products,
+    usaVeiculo,
   } = useStore();
+  const t = useTermos();
   const services = useMemo(() => allServices.filter((s) => s.active), [allServices]);
+  // Modo vendas: a venda é uma lista de produtos com quantidade, e o valor é a soma.
+  const vendas = company.usageMode === "VENDAS";
+  const activeProducts = useMemo(() => products.filter((p) => p.active), [products]);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const chosen = activeProducts.filter((p) => (qty[p.id] ?? 0) > 0);
+  const itemsTotal = chosen.reduce((s, p) => s + p.price * (qty[p.id] ?? 0), 0);
+  const stepNames = vendas ? ["Cliente", "Produtos", "Resumo"] : steps;
+  const itemsText = chosen.map((p) => `${p.name} (${qty[p.id]})`).join(", ");
 
   const [step, setStep] = useState(0);
   const [clientId, setClientId] = useState<string>(clients[0]?.id ?? "");
@@ -97,8 +110,8 @@ function NovaOS() {
         toast.error("Selecione um cliente");
         return;
       }
-      let finalVehicleId = vehicleId;
-      if (!finalVehicleId || finalVehicleId === "__new") {
+      let finalVehicleId = usaVeiculo ? vehicleId : "";
+      if (usaVeiculo && (!finalVehicleId || finalVehicleId === "__new")) {
         if (!newVehicle.brand.trim() || !newVehicle.model.trim()) {
           toast.error("Informe a marca e o modelo do veículo");
           return;
@@ -106,9 +119,13 @@ function NovaOS() {
         finalVehicleId = (await addVehicle({ ...newVehicle, clientId: finalClientId })).id;
         setVehicleId(finalVehicleId);
       }
-      const orderPrice = parseMoney(price);
-      if (!serviceId || !date || !time || orderPrice <= 0) {
-        toast.error("Informe serviço, data, horário e um valor maior que zero");
+      const orderPrice = vendas ? itemsTotal : parseMoney(price);
+      if (vendas ? chosen.length === 0 : !serviceId) {
+        toast.error(vendas ? "Escolha ao menos um produto" : "Escolha o serviço");
+        return;
+      }
+      if (!date || !time || orderPrice <= 0) {
+        toast.error("Informe data, horário e um valor maior que zero");
         return;
       }
 
@@ -117,7 +134,15 @@ function NovaOS() {
         {
           clientId: finalClientId,
           vehicleId: finalVehicleId,
-          serviceId,
+          serviceId: vendas ? "" : serviceId,
+          items: vendas
+            ? chosen.map((p) => ({
+                productId: p.id,
+                name: p.name,
+                quantity: qty[p.id] ?? 0,
+                unitPrice: p.price,
+              }))
+            : [],
           date,
           time,
           price: orderPrice,
@@ -132,9 +157,11 @@ function NovaOS() {
         search: { criada: true },
         replace: true,
       });
-      toast.success(`${created.code} registrado com sucesso`);
+      toast.success(`${t.codigo(created.code)} registrad${t.o} com sucesso`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o atendimento");
+      toast.error(
+        error instanceof Error ? error.message : `Não foi possível salvar ${t.o} ${t.atendimento}`,
+      );
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -143,10 +170,10 @@ function NovaOS() {
 
   return (
     <PhoneShell fab={false} bottomNav={false}>
-      <TopBar title="Novo atendimento" subtitle={steps[step] ?? ""} backTo="/dashboard" />
+      <TopBar title={t.novo} subtitle={stepNames[step] ?? ""} backTo="/dashboard" />
 
       <div className="flex gap-2 px-5 pt-4">
-        {steps.map((s, i) => (
+        {stepNames.map((s, i) => (
           <div
             key={s}
             className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-secondary" : "bg-muted"}`}
@@ -195,97 +222,172 @@ function NovaOS() {
               </div>
             ) : null}
 
-            <Field label="Veículo">
-              <select
-                className={inputClass}
-                value={vehicleId}
-                onChange={(e) => setVehicleId(e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {cars.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.brand} {v.model} — {v.plate}
-                  </option>
-                ))}
-                <option value="__new">+ Novo veículo</option>
-              </select>
-            </Field>
+            {usaVeiculo ? (
+              <>
+                <Field label="Veículo">
+                  <select
+                    className={inputClass}
+                    value={vehicleId}
+                    onChange={(e) => setVehicleId(e.target.value)}
+                  >
+                    <option value="">Selecione</option>
+                    {cars.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.brand} {v.model}
+                        {v.plate ? ` — ${v.plate}` : ""}
+                      </option>
+                    ))}
+                    <option value="__new">+ Novo veículo</option>
+                  </select>
+                </Field>
 
-            {vehicleId === "__new" ||
-            (isNewClient && !vehicleId) ||
-            (!vehicleId && cars.length === 0) ? (
-              <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
-                <Field label="Marca">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.brand}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, brand: e.target.value })}
-                  />
-                </Field>
-                <Field label="Modelo">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.model}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
-                  />
-                </Field>
-                <Field label="Placa">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.plate}
-                    onChange={(e) =>
-                      setNewVehicle({ ...newVehicle, plate: e.target.value.toUpperCase() })
-                    }
-                  />
-                </Field>
-                <Field label="Cor">
-                  <input
-                    className={inputClass}
-                    value={newVehicle.color}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
-                  />
-                </Field>
-              </div>
+                {vehicleId === "__new" ||
+                (isNewClient && !vehicleId) ||
+                (!vehicleId && cars.length === 0) ? (
+                  <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4">
+                    <Field label="Marca">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.brand}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, brand: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Modelo">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.model}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Placa">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.plate}
+                        onChange={(e) =>
+                          setNewVehicle({ ...newVehicle, plate: e.target.value.toUpperCase() })
+                        }
+                      />
+                    </Field>
+                    <Field label="Cor">
+                      <input
+                        className={inputClass}
+                        value={newVehicle.color}
+                        onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </>
         ) : null}
 
-        {step === 1 ? (
-          <>
-            <Field label="Serviço">
-              <div className="space-y-2">
-                {services.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                    Nenhum serviço ativo.{" "}
-                    <Link to="/servicos" className="font-semibold text-secondary underline">
-                      Cadastre em Serviços e preços
-                    </Link>
-                  </p>
-                ) : null}
-                {services.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setServiceId(s.id);
-                      setPrice(String(s.price));
-                    }}
-                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
-                      serviceId === s.id
-                        ? "border-secondary bg-secondary/8"
-                        : "border-border bg-card"
+        {step === 1 && vendas ? (
+          <Field label="Produtos">
+            <div className="space-y-2">
+              {activeProducts.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  Nenhum produto ativo.{" "}
+                  <Link to="/estoque" className="font-semibold text-secondary underline">
+                    Cadastre em Produtos e estoque
+                  </Link>
+                </p>
+              ) : null}
+              {activeProducts.map((p) => {
+                const n = qty[p.id] ?? 0;
+                // Funcional: toques rápidos não perdem contagem; nunca passa do estoque.
+                const add = (d: number) =>
+                  setQty((q) => ({
+                    ...q,
+                    [p.id]: Math.max(0, Math.min(p.stock, (q[p.id] ?? 0) + d)),
+                  }));
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+                      n > 0 ? "border-secondary bg-secondary/8" : "border-border bg-card"
                     }`}
                   >
-                    <span>
-                      <span className="block text-sm font-semibold">{s.name}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{p.name}</span>
                       <span className="block text-[11px] text-muted-foreground">
-                        Duração aprox. {s.durationMin} min
+                        {brl(p.price)} • {p.stock} em estoque
                       </span>
                     </span>
-                    <span className="text-sm font-bold">{brl(s.price)}</span>
-                  </button>
-                ))}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        aria-label={`Tirar um ${p.name}`}
+                        disabled={n === 0}
+                        onClick={() => add(-1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-border disabled:opacity-30"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <span className="w-5 text-center text-sm font-bold" aria-live="polite">
+                        {n}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Adicionar um ${p.name}`}
+                        disabled={n >= p.stock}
+                        onClick={() => add(1)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-border disabled:opacity-30"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between px-1 pt-1 text-sm">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-bold">{brl(itemsTotal)}</span>
               </div>
-            </Field>
+            </div>
+          </Field>
+        ) : null}
+
+        {step === 1 ? (
+          <>
+            {vendas ? null : (
+              <Field label="Serviço">
+                <div className="space-y-2">
+                  {services.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      Nenhum serviço ativo.{" "}
+                      <Link to="/servicos" className="font-semibold text-secondary underline">
+                        Cadastre em Serviços e preços
+                      </Link>
+                    </p>
+                  ) : null}
+                  {services.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setServiceId(s.id);
+                        setPrice(String(s.price));
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
+                        serviceId === s.id
+                          ? "border-secondary bg-secondary/8"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      <span>
+                        <span className="block text-sm font-semibold">{s.name}</span>
+                        {company.usesDuration !== false ? (
+                          <span className="block text-[11px] text-muted-foreground">
+                            Duração aprox. {s.durationMin} min
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-sm font-bold">{brl(s.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Data">
@@ -306,15 +408,17 @@ function NovaOS() {
               </Field>
             </div>
 
-            <Field label="Valor (R$)" hint="Você pode ajustar o valor sugerido do serviço.">
-              <input
-                type="text"
-                inputMode="decimal"
-                className={inputClass}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </Field>
+            {vendas ? null : (
+              <Field label="Valor (R$)" hint="Você pode ajustar o valor sugerido do serviço.">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={inputClass}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+              </Field>
+            )}
 
             <Field label="Observações">
               <textarea
@@ -322,7 +426,7 @@ function NovaOS() {
                 className={inputClass}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Detalhes do atendimento"
+                placeholder={`Detalhes d${t.o} ${t.atendimento}`}
               />
             </Field>
           </>
@@ -336,20 +440,28 @@ function NovaOS() {
                   k: "Cliente",
                   v: isNewClient ? newClient.name : clients.find((c) => c.id === clientId)?.name,
                 },
-                {
-                  k: "Veículo",
-                  v:
-                    vehicleId && vehicleId !== "__new"
-                      ? (() => {
-                          const v = cars.find((x) => x.id === vehicleId);
-                          return v ? `${v.brand} ${v.model} — ${v.plate}` : "—";
-                        })()
-                      : `${newVehicle.brand} ${newVehicle.model}`,
-                },
-                { k: "Serviço", v: services.find((s) => s.id === serviceId)?.name },
+                ...(usaVeiculo
+                  ? [
+                      {
+                        k: "Veículo",
+                        v:
+                          vehicleId && vehicleId !== "__new"
+                            ? (() => {
+                                const v = cars.find((x) => x.id === vehicleId);
+                                return v
+                                  ? `${v.brand} ${v.model}${v.plate ? ` — ${v.plate}` : ""}`
+                                  : "—";
+                              })()
+                            : `${newVehicle.brand} ${newVehicle.model}`,
+                      },
+                    ]
+                  : []),
+                vendas
+                  ? { k: "Produtos", v: itemsText }
+                  : { k: "Serviço", v: services.find((s) => s.id === serviceId)?.name },
                 { k: "Data", v: date.split("-").reverse().join("/") },
                 { k: "Horário", v: time },
-                { k: "Valor", v: brl(Number(price) || 0) },
+                { k: "Valor", v: brl(vendas ? itemsTotal : parseMoney(price)) },
                 { k: "Status", v: "Agendado" },
               ].map((row) => (
                 <div
@@ -362,8 +474,8 @@ function NovaOS() {
               ))}
             </div>
             <p className="rounded-2xl border border-secondary/20 bg-secondary/8 p-3.5 text-xs text-muted-foreground">
-              Ao salvar, o atendimento entra na agenda, no faturamento previsto e no histórico do
-              cliente — e a mensagem de WhatsApp é gerada automaticamente.
+              Ao salvar, {t.o} {t.atendimento} entra na agenda, no faturamento previsto e no
+              histórico do cliente — e a mensagem de WhatsApp é gerada automaticamente.
             </p>
           </div>
         ) : null}
@@ -388,7 +500,7 @@ function NovaOS() {
               </>
             ) : (
               <>
-                <Check className="h-4 w-4" /> Salvar atendimento
+                <Check className="h-4 w-4" /> Salvar {t.atendimento}
               </>
             )}
           </PrimaryButton>

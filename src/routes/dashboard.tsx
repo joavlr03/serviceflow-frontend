@@ -9,10 +9,12 @@ import {
   Settings,
   TrendingUp,
   Users,
+  Package,
 } from "lucide-react";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { StatCard, StatusBadge } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, formatLongDate, todayISO } from "@/lib/format";
 
 export const Route = createFileRoute("/dashboard")({
@@ -32,7 +34,8 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { company, orders, clientById, vehicleById, serviceById } = useStore();
+  const { company, orders, clientById, vehicleLabel, orderTitle } = useStore();
+  const t = useTermos();
   const today = todayISO();
   const todays = orders
     .filter((o) => o.date === today)
@@ -66,8 +69,7 @@ function Dashboard() {
               <div className="min-w-0">
                 <p className="truncate text-base font-bold">{clientById(next.clientId)?.name}</p>
                 <p className="truncate text-xs opacity-75">
-                  {serviceById(next.serviceId)?.name} • {vehicleById(next.vehicleId)?.brand}{" "}
-                  {vehicleById(next.vehicleId)?.model}
+                  {[orderTitle(next), vehicleLabel(next.vehicleId)].filter(Boolean).join(" • ")}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-brand-accent px-3 py-1.5 text-sm font-bold text-secondary-foreground">
@@ -98,8 +100,11 @@ function Dashboard() {
         <h2 className="mb-3 text-sm font-bold">Atalhos rápidos</h2>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { to: "/os/nova", label: "Novo atendimento", icon: Plus },
-            { to: "/agenda", label: "Agenda", icon: CalendarDays },
+            { to: "/os/nova", label: t.novo, icon: Plus },
+            // Modo vendas troca a agenda pelo atalho de estoque.
+            company.usageMode === "VENDAS"
+              ? { to: "/estoque", label: "Estoque", icon: Package }
+              : { to: "/agenda", label: "Agenda", icon: CalendarDays },
             { to: "/clientes", label: "Clientes", icon: Users },
             { to: "/despesas", label: "Despesas", icon: Receipt },
           ].map((s) => (
@@ -119,7 +124,9 @@ function Dashboard() {
 
       <section className="px-5 pt-6">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold">Próximos atendimentos</h2>
+          <h2 className="text-sm font-bold">
+            Próxim{t.o}s {t.atendimentos}
+          </h2>
           <Link to="/agenda" className="text-xs font-semibold text-secondary">
             Ver agenda
           </Link>
@@ -127,7 +134,6 @@ function Dashboard() {
         <div className="space-y-2.5">
           {todays.map((o) => {
             const client = clientById(o.clientId);
-            const vehicle = vehicleById(o.vehicleId);
             return (
               <Link
                 key={o.id}
@@ -137,12 +143,12 @@ function Dashboard() {
               >
                 <div className="flex w-14 shrink-0 flex-col items-center rounded-xl bg-muted py-2">
                   <span className="text-sm font-bold">{o.time}</span>
-                  <span className="text-[10px] text-muted-foreground">{o.code}</span>
+                  <span className="text-[10px] text-muted-foreground">{t.codigo(o.code)}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{client?.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {vehicle?.brand} {vehicle?.model} • {serviceById(o.serviceId)?.name}
+                    {[vehicleLabel(o.vehicleId), orderTitle(o)].filter(Boolean).join(" • ")}
                   </p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <StatusBadge status={o.status} />
@@ -154,7 +160,7 @@ function Dashboard() {
           })}
           {todays.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-              Nenhum atendimento agendado para hoje.
+              {t.nenhum} agendad{t.o} para hoje.
             </p>
           ) : null}
         </div>
@@ -167,14 +173,14 @@ function Dashboard() {
             <p className="text-sm font-bold">Mensagens de confirmação</p>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Gere a mensagem pronta do atendimento e envie você mesmo pelo WhatsApp, mantendo o
-            contato pessoal.
+            Gere a mensagem pronta d{t.o} {t.atendimento} e envie você mesmo pelo WhatsApp, mantendo
+            o contato pessoal.
           </p>
         </div>
         <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card p-4">
           <CheckCircle2 className="h-4 w-4 text-success" />
           <p className="text-xs text-muted-foreground">
-            Receita realizada considera apenas atendimentos finalizados.
+            Receita realizada considera apenas {t.atendimentos} finalizad{t.o}s.
           </p>
           <TrendingUp className="ml-auto h-4 w-4 text-muted-foreground" />
         </div>

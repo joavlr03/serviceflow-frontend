@@ -2,10 +2,14 @@ import type {
   Client,
   Company,
   Expense,
+  Income,
   OrderPayment,
+  OnboardingInput,
   OrderStatus,
   ServiceOrder,
   ServiceType,
+  Product,
+  Category,
   Vehicle,
 } from "./types";
 
@@ -28,13 +32,17 @@ type LoginResult = {
 type ApiClient = Omit<Client, "id"> & { id: number };
 type ApiVehicle = Omit<Vehicle, "id" | "clientId"> & { id: number; clientId: number };
 type ApiService = Omit<ServiceType, "id"> & { id: number };
-type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId"> & {
+type ApiCategory = Omit<Category, "id"> & { id: number };
+type ApiProduct = Omit<Product, "id"> & { id: number };
+type ApiOrder = Omit<ServiceOrder, "id" | "clientId" | "vehicleId" | "serviceId" | "items"> & {
+  vehicleId: number | null;
+  items?: Array<{ productId: number; name: string; quantity: number; unitPrice: number }>;
   id: number;
   clientId: number;
-  vehicleId: number;
-  serviceId: number;
+  serviceId: number | null;
 };
 type ApiExpense = Omit<Expense, "id"> & { id: number };
+type ApiIncome = Omit<Income, "id"> & { id: number };
 type ApiCompany = Omit<Company, "id"> & { id: number };
 
 export class ApiError extends Error {
@@ -186,15 +194,25 @@ const vehicle = (x: ApiVehicle): Vehicle => ({
   clientId: String(x.clientId),
 });
 const service = (x: ApiService): ServiceType => ({ ...x, id: String(x.id) });
+const category = (x: ApiCategory): Category => ({ ...x, id: String(x.id) });
 const order = (x: ApiOrder): ServiceOrder => ({
   ...x,
   id: String(x.id),
   // API ainda gera "OS-1042"; nas telas o termo é "Atendimento"
   code: String(x.code).replace(/^OS-/, "AT-"),
   clientId: String(x.clientId),
-  vehicleId: String(x.vehicleId),
-  serviceId: String(x.serviceId),
+  vehicleId: x.vehicleId == null ? "" : String(x.vehicleId),
+  serviceId: x.serviceId == null ? "" : String(x.serviceId),
+  items: (x.items ?? []).map((i) => ({ ...i, productId: String(i.productId) })),
   time: String(x.time).slice(0, 5),
+});
+// Corpo de criar/editar atendimento: venda manda itens em vez de serviço.
+const orderBody = (x: Omit<ServiceOrder, "id" | "code" | "status">) => ({
+  ...x,
+  clientId: Number(x.clientId),
+  vehicleId: x.vehicleId ? Number(x.vehicleId) : null,
+  serviceId: x.serviceId ? Number(x.serviceId) : null,
+  items: x.items?.map((i) => ({ productId: Number(i.productId), quantity: i.quantity })),
 });
 const expense = (x: ApiExpense): Expense => ({ ...x, id: String(x.id) });
 
@@ -211,6 +229,13 @@ export const api = {
   company: async () => {
     const x = await request<ApiCompany>("/empresa");
     return { ...x, id: String(x.id) } as Company;
+  },
+  completeOnboarding: async (x: OnboardingInput) => {
+    const c = await request<ApiCompany>("/empresa/onboarding", {
+      method: "POST",
+      body: JSON.stringify(x),
+    });
+    return { ...c, id: String(c.id) } as Company;
   },
   updateThemeColor: async (color: string) => {
     const x = await request<ApiCompany>("/empresa/tema", {
@@ -242,6 +267,32 @@ export const api = {
       }),
     ),
   deleteService: (id: string) => request<void>(`/servicos/${id}`, { method: "DELETE" }),
+  products: async () =>
+    (await request<ApiProduct[]>("/produtos")).map((x): Product => ({ ...x, id: String(x.id) })),
+  saveProduct: async (id: string | null, x: Omit<Product, "id">) => {
+    const p = await request<ApiProduct>(id ? `/produtos/${id}` : "/produtos", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(x),
+    });
+    return { ...p, id: String(p.id) } as Product;
+  },
+  deleteProduct: (id: string) => request<void>(`/produtos/${id}`, { method: "DELETE" }),
+  categories: async () =>
+    (
+      await Promise.all(
+        ["DESPESA", "ENTRADA"].map((tipo) => request<ApiCategory[]>(`/categorias?tipo=${tipo}`)),
+      )
+    )
+      .flat()
+      .map(category),
+  saveCategory: async (id: string | null, x: Omit<Category, "id">) =>
+    category(
+      await request<ApiCategory>(id ? `/categorias/${id}` : "/categorias", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(x),
+      }),
+    ),
+  deleteCategory: (id: string) => request<void>(`/categorias/${id}`, { method: "DELETE" }),
   orders: async () =>
     (await request<ApiOrder[]>(`/ordens-servico?${operationalPeriod()}`)).map(order),
   createOrder: async (x: Omit<ServiceOrder, "id" | "code">, idempotencyKey: string) => {
@@ -250,12 +301,7 @@ export const api = {
       await request<ApiOrder>("/ordens-servico", {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({
-          ...body,
-          clientId: Number(body.clientId),
-          vehicleId: Number(body.vehicleId),
-          serviceId: Number(body.serviceId),
-        }),
+        body: JSON.stringify(orderBody(body)),
       }),
     );
   },
@@ -263,12 +309,7 @@ export const api = {
     order(
       await request<ApiOrder>(`/ordens-servico/${id}`, {
         method: "PUT",
-        body: JSON.stringify({
-          ...x,
-          clientId: Number(x.clientId),
-          vehicleId: Number(x.vehicleId),
-          serviceId: Number(x.serviceId),
-        }),
+        body: JSON.stringify(orderBody(x)),
       }),
     ),
   setOrderStatus: async (id: string, status: OrderStatus, payment?: OrderPayment) =>
@@ -282,4 +323,8 @@ export const api = {
     (await request<ApiExpense[]>(`/despesas?${operationalPeriod()}`)).map(expense),
   createExpense: async (x: Omit<Expense, "id">) =>
     expense(await request<ApiExpense>("/despesas", { method: "POST", body: JSON.stringify(x) })),
+  incomes: async () =>
+    (await request<ApiIncome[]>(`/entradas?${operationalPeriod()}`)).map(expense),
+  createIncome: async (x: Omit<Income, "id">) =>
+    expense(await request<ApiIncome>("/entradas", { method: "POST", body: JSON.stringify(x) })),
 };

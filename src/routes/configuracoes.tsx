@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronRight, Tag } from "lucide-react";
+import { Check, ChevronRight, Tag, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { PhoneShell } from "@/components/app/PhoneShell";
 import { PrimaryButton, TopBar } from "@/components/app/ui-bits";
@@ -69,6 +69,21 @@ function Configuracoes() {
           <div className="flex-1">
             <p className="text-sm font-semibold">Serviços e preços</p>
             <p className="text-xs text-muted-foreground">Cadastre o que sua empresa oferece</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+        <Link
+          to="/categorias"
+          className="mt-2.5 flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
+            <Receipt className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Categorias</p>
+            <p className="text-xs text-muted-foreground">
+              Organize despesas e entradas do seu jeito
+            </p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>

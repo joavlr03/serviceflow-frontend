@@ -13,6 +13,7 @@ import {
   inputClass,
 } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useTermos } from "@/lib/termos";
 import { brl, formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -37,11 +38,13 @@ function ClientDetail() {
     clientById,
     vehiclesOfClient,
     ordersOfClient,
-    serviceById,
-    vehicleById,
+    orderTitle,
+    vehicleLabel,
+    usaVeiculo,
     addVehicle,
     updateClient,
   } = useStore();
+  const t = useTermos();
   const client = clientById(clientId);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -121,14 +124,14 @@ function ClientDetail() {
               to="/os/nova"
               className="flex items-center justify-center gap-2 rounded-xl bg-brand-accent py-2.5 text-xs font-semibold text-secondary-foreground"
             >
-              <Plus className="h-4 w-4" /> Novo atendimento
+              <Plus className="h-4 w-4" /> {t.novo}
             </Link>
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-3 gap-2 px-5 pt-4">
-        <StatCard label="Atendimentos" value={String(finished.length)} />
+        <StatCard label={t.Atendimentos} value={String(finished.length)} />
         <StatCard label="Total gasto" value={brl(totalSpent)} tone="accent" />
         <StatCard label="Última visita" value={finished[0] ? formatDate(finished[0].date) : "—"} />
       </section>
@@ -139,43 +142,44 @@ function ClientDetail() {
         </p>
       ) : null}
 
-      <section className="px-5 pt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold">Veículos</h2>
-          <button onClick={() => setOpen(true)} className="text-xs font-semibold text-secondary">
-            Adicionar
-          </button>
-        </div>
-        <div className="space-y-2.5">
-          {cars.map((v) => (
-            <div
-              key={v.id}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
-                <Car className="h-5 w-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">
-                  {v.brand} {v.model}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {v.plate} • {v.color}
-                </p>
+      {usaVeiculo ? (
+        <section className="px-5 pt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold">Veículos</h2>
+            <button onClick={() => setOpen(true)} className="text-xs font-semibold text-secondary">
+              Adicionar
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            {cars.map((v) => (
+              <div
+                key={v.id}
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
+                  <Car className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {v.brand} {v.model}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {v.plate} • {v.color}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-          {cars.length === 0 ? (
-            <EmptyState title="Sem veículos" description="Cadastre o veículo do cliente." />
-          ) : null}
-        </div>
-      </section>
+            ))}
+            {cars.length === 0 ? (
+              <EmptyState title="Sem veículos" description="Cadastre o veículo do cliente." />
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="px-5 pb-8 pt-6">
         <h2 className="mb-3 text-sm font-bold">Histórico de serviços</h2>
         <div className="space-y-2.5">
           {history.map((o) => {
-            const v = vehicleById(o.vehicleId);
             return (
               <Link
                 key={o.id}
@@ -184,11 +188,13 @@ function ClientDetail() {
                 className="block rounded-2xl border border-border bg-card p-3.5 shadow-card"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">{serviceById(o.serviceId)?.name}</p>
+                  <p className="text-sm font-semibold">{orderTitle(o)}</p>
                   <StatusBadge status={o.status} />
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {formatDate(o.date)} às {o.time} • {v?.brand} {v?.model}
+                  {[`${formatDate(o.date)} às ${o.time}`, vehicleLabel(o.vehicleId)]
+                    .filter(Boolean)
+                    .join(" • ")}
                 </p>
                 <p className="mt-1 text-sm font-bold">{brl(o.price)}</p>
               </Link>
@@ -197,7 +203,7 @@ function ClientDetail() {
           {history.length === 0 ? (
             <EmptyState
               title="Sem histórico"
-              description="Este cliente ainda não possui atendimentos."
+              description={`Este cliente ainda não possui ${t.atendimentos}.`}
             />
           ) : null}
         </div>

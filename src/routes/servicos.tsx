@@ -47,7 +47,9 @@ const errorMessage = (error: unknown) =>
       : "Não foi possível salvar o serviço";
 
 function Servicos() {
-  const { services, saveService, deleteService } = useStore();
+  const { services, saveService, deleteService, company } = useStore();
+  // Empresa que desligou a duração no primeiro acesso não vê nem edita o campo.
+  const usaDuracao = company.usesDuration !== false;
   // null = fechado; "" = novo serviço; id = editando
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -76,7 +78,7 @@ function Servicos() {
       ? "Informe o nome do serviço"
       : !form.price.trim() || price < 0
         ? "Informe um preço válido"
-        : !Number.isInteger(durationMin) || durationMin < 1 || durationMin > 1440
+        : usaDuracao && (!Number.isInteger(durationMin) || durationMin < 1 || durationMin > 1440)
           ? "A duração deve ser entre 1 e 1440 minutos"
           : null;
     if (invalid) {
@@ -140,7 +142,9 @@ function Servicos() {
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold">{s.name}</span>
               <span className="block text-[11px] text-muted-foreground">
-                {s.durationMin} min{s.active ? "" : " • Inativo"}
+                {[usaDuracao ? `${s.durationMin} min` : "", s.active ? "" : "Inativo"]
+                  .filter(Boolean)
+                  .join(" • ")}
               </span>
             </span>
             <span className="shrink-0 text-sm font-bold">{brl(s.price)}</span>
@@ -176,7 +180,7 @@ function Servicos() {
                   placeholder="Ex.: Corte de cabelo"
                 />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className={usaDuracao ? "grid grid-cols-2 gap-3" : ""}>
                 <Field label="Preço (R$)">
                   <input
                     className={inputClass}
@@ -186,14 +190,16 @@ function Servicos() {
                     placeholder="0,00"
                   />
                 </Field>
-                <Field label="Duração (min)">
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    value={form.durationMin}
-                    onChange={(e) => setForm({ ...form, durationMin: e.target.value })}
-                  />
-                </Field>
+                {usaDuracao ? (
+                  <Field label="Duração (min)">
+                    <input
+                      className={inputClass}
+                      inputMode="numeric"
+                      value={form.durationMin}
+                      onChange={(e) => setForm({ ...form, durationMin: e.target.value })}
+                    />
+                  </Field>
+                ) : null}
               </div>
               <div className="flex items-center justify-between rounded-xl border border-border bg-card px-3.5 py-3">
                 <span>
