@@ -96,6 +96,7 @@ export interface Company {
   usesVehicle?: boolean; // ausente = true (lava-rápido, oficina)
   usesDuration?: boolean; // ausente = true
   onboardingDone?: boolean; // false = cai no assistente de primeiro acesso
+  appIcon?: string | null; // chave em src/lib/app-icon.ts; nulo = gota
 }
 
 export interface OnboardingInput {
@@ -105,6 +106,7 @@ export interface OnboardingInput {
   usesVehicle: boolean;
   usesDuration: boolean;
   themeColor: string | null;
+  appIcon: string;
   services: Array<{ name: string; price: number; durationMin?: number }>;
   products: Array<{ name: string; price: number; stock: number }>;
 }

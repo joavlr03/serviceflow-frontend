@@ -9,6 +9,7 @@ import {
 } from "react";
 import { api, ensureSession } from "./api-client";
 import { applyThemeColor } from "./theme";
+import { applyAppIcon } from "./app-icon";
 import type {
   Client,
   Company,
@@ -94,6 +95,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const vs = (await Promise.all(cs.map((c) => api.clientVehicles(c.id)))).flat();
       setCompany(co);
       applyThemeColor(co.themeColor);
+      applyAppIcon(co.appIcon);
       setClients(cs);
       setServices(ss);
       setOrders(os);
